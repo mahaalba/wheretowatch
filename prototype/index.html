@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where To Watch — World Cup 2026 in London</title>
+<meta name="description" content="Find the pubs, bars and rooftops across London showing every World Cup 2026 match — tonight, late and overnight.">
+
+<!-- Leaflet (free map, no API key) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#0A1A33; --ink-2:#12294D;
+    --green:#00B368; --green-deep:#0A6B45;
+    --amber:#FFB22E;
+    --paper:#F6F7F4; --card:#fff;
+    --line:rgba(10,26,51,0.12);
+    --soft:#5B6577; --mute:#9AA3B0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);font-family:'Inter',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;}
+  button{font-family:inherit;cursor:pointer;}
+  .anton{font-family:'Anton',sans-serif;text-transform:uppercase;letter-spacing:0.5px;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.45;transform:scale(.8);}}
+  .rail::-webkit-scrollbar{height:8px;}
+  .rail::-webkit-scrollbar-thumb{background:rgba(10,26,51,.18);border-radius:999px;}
+  .rail::-webkit-scrollbar-track{background:transparent;}
+  .wrap{max-width:1400px;margin:0 auto;}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:1000;background:rgba(246,247,244,.88);backdrop-filter:blur(12px);border-bottom:1px solid rgba(10,26,51,.08);}
+  .nav-in{padding:13px 24px;display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .dot{width:13px;height:13px;border-radius:999px;background:var(--green);box-shadow:0 0 0 4px rgba(0,179,104,.18);}
+  .brand span{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:.5px;text-transform:uppercase;}
+  .brand b{color:var(--green);font-weight:400;}
+  .area-pill{display:flex;align-items:center;gap:7px;margin-left:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px;}
+  .area-pill select{border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;}
+  .btn-dark{background:var(--ink);color:#fff;border:none;border-radius:999px;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.2px;}
+
+  /* HEADER */
+  header{padding:36px 24px 6px;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(0,179,104,.12);color:var(--green-deep);border-radius:999px;padding:6px 13px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;}
+  .eyebrow .live{width:8px;height:8px;border-radius:999px;background:var(--green);animation:pulse 1.6s infinite;}
+  h1{font-family:'Anton',sans-serif;font-size:clamp(42px,6.4vw,80px);line-height:.94;letter-spacing:.5px;text-transform:uppercase;margin:14px 0 0;max-width:15ch;}
+  h1 em{color:var(--green);font-style:normal;}
+  .lede{font-size:17px;color:var(--soft);margin:22px 0 0;max-width:48ch;line-height:1.5;}
+
+  .searchbar{margin-top:24px;background:#fff;border:1px solid rgba(10,26,51,.1);border-radius:18px;padding:8px;display:flex;gap:8px;flex-wrap:wrap;box-shadow:0 14px 40px rgba(10,26,51,.07);}
+  .sf{flex:1;min-width:160px;display:flex;flex-direction:column;justify-content:center;padding:8px 14px;}
+  .sf label{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--mute);text-transform:uppercase;}
+  .sf input,.sf select{border:none;outline:none;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);background:transparent;cursor:pointer;padding:2px 0;width:100%;}
+  .sf-div{width:1px;background:rgba(10,26,51,.1);margin:6px 0;}
+  .btn-go{background:var(--green);color:#fff;border:none;border-radius:12px;padding:0 26px;min-height:52px;font-size:15px;font-weight:700;letter-spacing:.2px;}
+
+  /* FIXTURES RAIL */
+  .fx-head{display:flex;align-items:baseline;gap:12px;margin:22px 0 11px;}
+  .fx-head .lbl{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .fx-head .sub{font-size:12px;color:var(--mute);}
+  .fx-rail{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;}
+  .fx{min-width:236px;scroll-snap-align:start;background:var(--ink);color:#fff;border-radius:15px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;flex:none;}
+  .fx-top{display:flex;align-items:center;justify-content:space-between;}
+  .fx-flags{display:flex;align-items:center;gap:7px;font-size:19px;}
+  .fx-flags .v{font-size:11px;color:#7C8AA0;font-weight:600;}
+  .fx-grp{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7C8AA0;}
+  .fx-title{font-size:14px;font-weight:700;line-height:1.2;}
+  .fx-bot{display:flex;align-items:center;justify-content:space-between;}
+  .fx-time{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--amber);}
+  .badge{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:3px 8px;}
+  .badge.tonight{background:rgba(0,179,104,.18);color:#7CF0BE;}
+  .badge.late{background:rgba(255,178,46,.2);color:#FFD27A;}
+
+  /* FILTER BAR */
+  .filterbar{padding:20px 24px 8px;}
+  .fb-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .showing{display:flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border-radius:12px;padding:9px 14px;}
+  .showing .l{font-size:12px;color:var(--mute);font-weight:600;}
+  .showing select{border:none;outline:none;background:transparent;font-family:inherit;font-size:14px;font-weight:700;color:var(--amber);cursor:pointer;}
+  .count{font-size:14px;color:var(--soft);}
+  .count b{color:var(--ink);}
+  .chips{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;}
+  .chip{white-space:nowrap;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:600;transition:all .15s;border:1.5px solid var(--line);background:#fff;color:var(--ink);}
+  .chip.on{border-color:var(--ink);background:var(--ink);color:#fff;}
+
+  /* SPLIT LAYOUT */
+  .split{padding:8px 24px 56px;display:flex;gap:28px;align-items:flex-start;}
+  .left{flex:1;min-width:0;}
+  .right{width:40%;max-width:520px;position:sticky;top:88px;height:calc(100vh - 110px);min-height:440px;}
+  #map{width:100%;height:100%;border-radius:20px;border:1px solid rgba(10,26,51,.18);}
+  .leaflet-container{font-family:'Inter',sans-serif;background:#e8eae5;}
+
+  /* CARD */
+  .card{background:#fff;border:1px solid rgba(10,26,51,.08);border-radius:20px;overflow:hidden;box-shadow:0 8px 24px rgba(10,26,51,.05);margin-bottom:18px;transition:box-shadow .2s,border-color .2s;cursor:pointer;}
+  .card.active{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,179,104,.2),0 8px 24px rgba(10,26,51,.08);}
+  .cover{position:relative;height:150px;}
+  .cover .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.32);}
+  .feat-badge{position:absolute;top:12px;left:12px;background:var(--amber);color:var(--ink);border-radius:999px;padding:5px 11px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,.18);}
+  .neigh-badge{position:absolute;top:12px;right:12px;background:rgba(10,26,51,.72);color:#fff;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;backdrop-filter:blur(4px);}
+  .mapnum{position:absolute;bottom:12px;left:12px;width:28px;height:28px;border-radius:999px;background:var(--paper);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,.2);}
+  .cbody{padding:16px 18px 18px;}
+  .ctop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  .cname{font-family:'Anton',sans-serif;font-size:25px;letter-spacing:.4px;text-transform:uppercase;margin:0;line-height:1;}
+  .rating{display:flex;align-items:center;gap:5px;white-space:nowrap;background:var(--paper);border-radius:999px;padding:5px 10px;margin-top:2px;}
+  .rating .star{color:var(--amber);font-size:13px;}
+  .rating b{font-size:13px;}
+  .rating .rev{font-size:12px;color:var(--mute);}
+  .cmeta{font-size:13px;color:var(--soft);margin-top:7px;}
+  .showtonight{display:flex;align-items:center;gap:9px;margin-top:13px;background:var(--paper);border-radius:12px;padding:10px 13px;}
+  .showtonight .d{width:8px;height:8px;border-radius:999px;background:var(--green);animation:pulse 1.6s infinite;flex:none;}
+  .showtonight .tag{font-size:12px;font-weight:700;color:var(--green-deep);text-transform:uppercase;letter-spacing:.4px;}
+  .showtonight .mt{flex:1;font-size:14px;font-weight:600;text-align:right;}
+  .showtonight .ko{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;}
+  .features{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
+  .feat{font-size:12px;font-weight:600;color:#42506A;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 10px;}
+  .cap{font-size:12px;font-weight:700;border-radius:8px;padding:5px 10px;}
+  .crowd{margin-top:14px;background:var(--paper);border:1px solid rgba(10,26,51,.07);border-radius:14px;padding:12px 13px 13px;}
+  .crowd-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+  .crowd-h .l{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .crowd-h .r{font-size:11px;color:var(--mute);}
+  .bar{display:flex;height:11px;border-radius:999px;overflow:hidden;background:#e7e9e4;}
+  .bar .home{background:var(--green);transition:width .3s;}
+  .bar .away{background:var(--ink);transition:width .3s;}
+  .crowd-pct{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:12.5px;}
+  .crowd-pct .s{display:flex;align-items:center;gap:6px;font-weight:700;}
+  .crowd-pct .s .fl{font-size:15px;}
+  .imin{display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap;}
+  .imin .l{font-size:12px;color:var(--soft);font-weight:600;}
+  .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;letter-spacing:.2px;border:1.5px solid var(--line);background:#fff;color:var(--ink);}
+  .pill.sel{background:var(--amber);border-color:var(--amber);}
+  .picklbl{font-size:12px;font-weight:600;color:var(--green-deep);}
+  .cta{display:flex;gap:10px;margin-top:15px;}
+  .cta button{flex:1;border-radius:12px;padding:12px;font-size:14px;font-weight:700;}
+  .cta .reserve{background:var(--green);color:#fff;border:none;}
+  .cta .dir{background:#fff;color:var(--ink);border:1.5px solid rgba(10,26,51,.16);}
+
+  /* MAP PIN */
+  .pin{display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:var(--green);color:var(--ink);border:2px solid var(--ink);font-size:13px;font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,.35);}
+  .pin.feat{background:var(--amber);}
+  .pin.active{transform:scale(1.25);box-shadow:0 0 0 6px rgba(255,178,46,.3),0 4px 10px rgba(0,0,0,.35);}
+  .leaflet-popup-content-wrapper{border-radius:12px;}
+  .pop-name{font-family:'Anton',sans-serif;font-size:16px;text-transform:uppercase;letter-spacing:.3px;}
+  .pop-meta{font-size:12px;color:var(--soft);margin:2px 0 6px;}
+  .pop-link{font-size:13px;font-weight:700;color:var(--green-deep);cursor:pointer;}
+
+  /* VENUES STRIP */
+  .strip{background:var(--ink);color:#fff;margin-top:10px;}
+  .strip-in{padding:50px 24px;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap;}
+  .strip .kick{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--amber);}
+  .strip h2{font-family:'Anton',sans-serif;font-size:clamp(34px,4.4vw,52px);letter-spacing:.5px;text-transform:uppercase;margin:10px 0 0;line-height:.98;max-width:30ch;}
+  .strip p{font-size:16px;color:#9AABC2;margin:20px 0 0;line-height:1.5;max-width:30ch;}
+  .strip .btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .strip .btns button{border-radius:12px;padding:15px 26px;font-size:15px;font-weight:700;}
+  .strip .b1{background:var(--green);color:#fff;border:none;}
+  .strip .b2{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.25);}
+  .foot{border-top:1px solid rgba(255,255,255,.1);}
+  .foot-in{padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .foot .b{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:.5px;text-transform:uppercase;}
+  .foot .b em{color:var(--green);font-style:normal;}
+  .foot .c{font-size:13px;color:#7C8AA0;}
+
+  .disclaimer{background:#FFF8EC;border-bottom:1px solid #FBE3B4;color:#7A5A12;font-size:13px;font-weight:600;text-align:center;padding:9px 24px;}
+
+  /* ---------------- SIGNUP (Treatwell-style) ---------------- */
+  .su-overlay{position:fixed;inset:0;z-index:3000;background:var(--paper);display:none;flex-direction:column;}
+  .su-overlay.show{display:flex;}
+  .su-bar-wrap{position:sticky;top:0;background:#fff;border-bottom:1px solid rgba(10,26,51,.08);}
+  .su-bar-top{max-width:760px;margin:0 auto;padding:16px 24px 0;display:flex;align-items:center;gap:16px;}
+  .su-bar-top .brand{flex:1;}
+  .su-close{background:none;border:none;font-size:26px;line-height:1;color:var(--mute);padding:4px;}
+  .su-steps-lbl{max-width:760px;margin:0 auto;padding:10px 24px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--mute);}
+  .su-progress{max-width:760px;margin:8px auto 0;padding:0 24px 14px;}
+  .su-track{height:7px;border-radius:999px;background:#e7e9e4;overflow:hidden;}
+  .su-fill{height:100%;background:var(--green);border-radius:999px;width:0;transition:width .35s ease;}
+  .su-body{flex:1;overflow-y:auto;}
+  .su-inner{max-width:760px;margin:0 auto;padding:40px 24px 120px;}
+  .su-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--green-deep);}
+  .su-h{font-family:'Anton',sans-serif;font-size:clamp(30px,5vw,46px);letter-spacing:.5px;text-transform:uppercase;line-height:1;margin:12px 0 0;}
+  .su-sub{font-size:16px;color:var(--soft);margin:16px 0 0;line-height:1.5;max-width:46ch;}
+  .su-field{margin-top:26px;}
+  .su-field label{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .su-input{width:100%;padding:15px 16px;border:1.5px solid var(--line);border-radius:13px;font-family:inherit;font-size:16px;font-weight:500;color:var(--ink);outline:none;background:#fff;}
+  .su-input:focus{border-color:var(--green);}
+  .su-search-wrap{position:relative;}
+  .su-suggest{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(10,26,51,.14);overflow:hidden;z-index:5;}
+  .su-suggest-item{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;border-bottom:1px solid rgba(10,26,51,.06);}
+  .su-suggest-item:last-child{border-bottom:none;}
+  .su-suggest-item:hover{background:var(--paper);}
+  .su-suggest-item .pin{width:30px;height:30px;flex:none;border-radius:8px;background:rgba(0,179,104,.12);color:var(--green-deep);border:none;font-size:15px;box-shadow:none;}
+  .su-suggest-item .nm{font-weight:700;font-size:15px;}
+  .su-suggest-item .ad{font-size:13px;color:var(--soft);}
+  .su-gmaps-card{margin-top:26px;border:1.5px solid rgba(0,179,104,.4);background:#fff;border-radius:16px;padding:18px;display:none;}
+  .su-gmaps-card.show{display:block;}
+  .su-gmaps-card .badge-g{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--green-deep);background:rgba(0,179,104,.1);border-radius:999px;padding:5px 11px;}
+  .su-gmaps-card .gname{font-family:'Anton',sans-serif;font-size:24px;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 0;}
+  .su-gmaps-card .grow{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--soft);margin-top:8px;flex-wrap:wrap;}
+  .su-gmaps-card .grow .star{color:var(--amber);}
+  .su-edit{font-size:13px;font-weight:700;color:var(--green-deep);background:none;border:none;margin-top:12px;padding:0;}
+  .su-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:26px;}
+  .su-opt{border:1.5px solid var(--line);background:#fff;border-radius:15px;padding:18px 16px;text-align:left;transition:all .15s;display:flex;flex-direction:column;gap:8px;}
+  .su-opt .ic{font-size:24px;}
+  .su-opt .ti{font-size:15px;font-weight:700;}
+  .su-opt.sel{border-color:var(--green);background:rgba(0,179,104,.06);box-shadow:0 0 0 3px rgba(0,179,104,.14);}
+  .su-check{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);background:#fff;border-radius:13px;padding:14px 16px;margin-top:12px;cursor:pointer;transition:all .15s;}
+  .su-check.sel{border-color:var(--green);background:rgba(0,179,104,.06);}
+  .su-check .box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:13px;color:#fff;}
+  .su-check.sel .box{background:var(--green);border-color:var(--green);}
+  .su-check .lbl{font-size:15px;font-weight:600;}
+  .su-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .su-footer{position:sticky;bottom:0;background:rgba(246,247,244,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(10,26,51,.08);}
+  .su-footer-in{max-width:760px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;gap:14px;}
+  .su-back{background:none;border:none;font-size:15px;font-weight:700;color:var(--soft);}
+  .su-back[disabled]{opacity:0;pointer-events:none;}
+  .su-next{margin-left:auto;background:var(--green);color:#fff;border:none;border-radius:13px;padding:15px 34px;font-size:16px;font-weight:700;}
+  .su-next[disabled]{opacity:.4;pointer-events:none;}
+  .su-done{text-align:center;padding:30px 0;}
+  .su-done .tick{width:72px;height:72px;border-radius:999px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:38px;margin:0 auto 20px;}
+  @media(max-width:560px){.su-row2{grid-template-columns:1fr;}}
+
+  /* RESPONSIVE */
+  @media(max-width:900px){
+    .split{flex-direction:column;}
+    .left{width:100%;}
+    .right{width:100%;height:380px;position:relative;top:0;order:-1;}
+  }
+  @media(max-width:560px){
+    .nav-in,header,.filterbar,.split,.strip-in,.foot-in{padding-left:16px;padding-right:16px;}
+    .area-pill{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="disclaimer">⚠️ Prototype with sample data — venue names, ratings and crowd figures are illustrative placeholders, not real listings.</div>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="brand"><span class="dot"></span><span>Where To <b>Watch</b></span></div>
+    <div class="area-pill">📍 <select id="areaSel"></select></div>
+    <div style="flex:1"></div>
+    <button class="btn-dark" onclick="openSignup()">List your venue</button>
+  </div>
+</nav>
+
+<header class="wrap">
+  <span class="eyebrow"><span class="live"></span>Live · Group Stage</span>
+  <h1>Where to watch the <em>World&nbsp;Cup</em></h1>
+  <p class="lede">Find the pubs, bars and rooftops across London showing every match — tonight, late and overnight.</p>
+
+  <div class="searchbar">
+    <div class="sf">
+      <label>Where</label>
+      <input placeholder="Area or postcode" aria-label="Where">
+    </div>
+    <div class="sf-div"></div>
+    <div class="sf">
+      <label>When</label>
+      <select aria-label="When"><option>Tonight</option><option>Tomorrow</option><option>This weekend</option></select>
+    </div>
+    <div class="sf-div"></div>
+    <div class="sf">
+      <label>Match</label>
+      <select id="matchSelHero" aria-label="Match"></select>
+    </div>
+    <button class="btn-go" onclick="document.querySelector('.filterbar').scrollIntoView({behavior:'smooth'})">Search</button>
+  </div>
+
+  <div class="fx-head">
+    <span class="lbl">Tonight's fixtures</span>
+    <span class="sub">UK kickoff times · late &amp; overnight flagged</span>
+  </div>
+  <div class="fx-rail rail" id="fxRail"></div>
+</header>
+
+<div class="filterbar wrap">
+  <div class="fb-top">
+    <div class="showing"><span class="l">Showing</span><select id="matchSel"></select></div>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="chips rail" id="chips"></div>
+</div>
+
+<div class="split wrap">
+  <div class="left" id="list"></div>
+  <div class="right"><div id="map"></div></div>
+</div>
+
+<section class="strip">
+  <div class="wrap strip-in">
+    <div>
+      <div class="kick">For venues</div>
+      <h2>List your venue on matchday</h2>
+      <p>Pack out your pub this World Cup. Get found by thousands of fans searching for somewhere to watch tonight.</p>
+    </div>
+    <div class="btns">
+      <button class="b1" onclick="openSignup()">List your venue — free</button>
+      <button class="b2">How it works</button>
+    </div>
+  </div>
+  <div class="foot">
+    <div class="wrap foot-in">
+      <span class="b">Where To <em>Watch</em></span>
+      <span class="c">London · 2026 World Cup · Find your matchday</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VENUE SIGNUP (Treatwell-style) ============ -->
+<div class="su-overlay" id="signup">
+  <div class="su-bar-wrap">
+    <div class="su-bar-top">
+      <div class="brand"><span class="dot"></span><span style="font-family:'Anton',sans-serif;font-size:18px;letter-spacing:.5px;text-transform:uppercase">Where To <b style="color:var(--green);font-weight:400">Watch</b> <span style="color:var(--mute);font-size:13px;font-weight:600">for business</span></span></div>
+      <button class="su-close" onclick="closeSignup()" aria-label="Close">×</button>
+    </div>
+    <div class="su-steps-lbl" id="suStepsLbl"></div>
+    <div class="su-progress"><div class="su-track"><div class="su-fill" id="suFill"></div></div></div>
+  </div>
+  <div class="su-body">
+    <div class="su-inner" id="suInner"></div>
+  </div>
+  <div class="su-footer">
+    <div class="su-footer-in">
+      <button class="su-back" id="suBack" onclick="suPrev()">← Back</button>
+      <button class="su-next" id="suNext" onclick="suNext()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const F = {  // flags
+  ENG:'🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}', CRO:'🇭🇷', FRA:'🇫🇷', SEN:'🇸🇳',
+  ARG:'🇦🇷', ALG:'🇩🇿', GHA:'🇬🇭', ESP:'🇪🇸', MEX:'🇲🇽', BRA:'🇧🇷', JPN:'🇯🇵'
+};
+
+const MATCHES = [
+  {key:'all', label:'All matches'},
+  {key:'eng-cro', label:'England v Croatia'},
+  {key:'fra-sen', label:'France v Senegal'},
+  {key:'arg-alg', label:'Argentina v Algeria'},
+  {key:'eng-gha', label:'England v Ghana'},
+];
+
+const FIXTURES = [
+  {home:'ENG',away:'CRO',title:'England v Croatia',group:'Group D',time:'9:00pm',late:false},
+  {home:'FRA',away:'SEN',title:'France v Senegal',group:'Group C',time:'8:00pm',late:false},
+  {home:'ARG',away:'ALG',title:'Argentina v Algeria',group:'Group H',time:'11:00pm',late:true},
+  {home:'ESP',away:'MEX',title:'Spain v Mexico',group:'Group F',time:'7:30pm',late:false},
+  {home:'BRA',away:'JPN',title:'Brazil v Japan',group:'Group E',time:'2:00am',late:true},
+  {home:'ENG',away:'GHA',title:'England v Ghana',group:'Group D',time:'Sat 5:00pm',late:false},
+];
+
+const CHIPS = [
+  {key:'outdoor',label:'Outdoor screen'},
+  {key:'late',label:'Open late'},
+  {key:'walkins',label:'Walk-ins'},
+  {key:'family',label:'Family friendly'},
+  {key:'kitchen',label:'Full kitchen'},
+  {key:'bigscreen',label:'Big screen'},
+  {key:'book',label:'Book a table'},
+];
+
+// Real London coordinates per venue
+const VENUES = [
+  {id:'pitchside', name:'The Pitch Side', type:'Sports bar', neigh:'Shoreditch', lat:51.5246, lng:-0.0786, walk:'4 min walk', matchKey:'eng-cro', matchLabel:'England v Croatia', kickoff:'9:00pm', features:['Outdoor screen','Open late','Big screen','Full kitchen'], featureKeys:['outdoor','late','bigscreen','kitchen'], capacity:'Filling up', rating:'4.8', reviews:'1,243', featured:true, cover:14, crowd:{home:{name:'England',code:'ENG',pct:74},away:{name:'Croatia',code:'CRO'}}},
+  {id:'floodlights', name:'Floodlights', type:'Cocktail bar', neigh:'Soho', lat:51.5132, lng:-0.1320, walk:'6 min walk', matchKey:'fra-sen', matchLabel:'France v Senegal', kickoff:'8:00pm', features:['Big screen','Book a table','Full kitchen'], featureKeys:['bigscreen','book','kitchen'], capacity:'Almost full', rating:'4.7', reviews:'980', featured:true, cover:150, crowd:{home:{name:'France',code:'FRA',pct:58},away:{name:'Senegal',code:'SEN'}}},
+  {id:'terrace', name:'The Terrace', type:'Rooftop bar', neigh:'Peckham', lat:51.4720, lng:-0.0691, walk:'9 min walk', matchKey:'arg-alg', matchLabel:'Argentina v Algeria', kickoff:'11:00pm', features:['Outdoor screen','Open late','Walk-ins'], featureKeys:['outdoor','late','walkins'], capacity:'Some space', rating:'4.9', reviews:'2,104', featured:false, cover:168, crowd:{home:{name:'Argentina',code:'ARG',pct:81},away:{name:'Algeria',code:'ALG'}}},
+  {id:'brixsocial', name:'Brixton Social', type:'Beer hall', neigh:'Brixton', lat:51.4613, lng:-0.1156, walk:'3 min walk', matchKey:'eng-cro', matchLabel:'England v Croatia', kickoff:'9:00pm', features:['Big screen','Walk-ins','Family friendly'], featureKeys:['bigscreen','walkins','family'], capacity:'Filling up', rating:'4.6', reviews:'1,560', featured:false, cover:200, crowd:{home:{name:'England',code:'ENG',pct:88},away:{name:'Croatia',code:'CRO'}}},
+  {id:'camdentap', name:'Camden Tap', type:'Craft pub', neigh:'Camden', lat:51.5390, lng:-0.1426, walk:'7 min walk', matchKey:'fra-sen', matchLabel:'France v Senegal', kickoff:'8:00pm', features:['Full kitchen','Family friendly','Walk-ins'], featureKeys:['kitchen','family','walkins'], capacity:'Some space', rating:'4.5', reviews:'760', featured:false, cover:24, crowd:{home:{name:'Senegal',code:'SEN',pct:55},away:{name:'France',code:'FRA'}}},
+  {id:'claphamkop', name:'The Clapham Kop', type:'Sports pub', neigh:'Clapham', lat:51.4626, lng:-0.1387, walk:'5 min walk', matchKey:'eng-cro', matchLabel:'England v Croatia', kickoff:'9:00pm', features:['Big screen','Open late','Book a table'], featureKeys:['bigscreen','late','book'], capacity:'Almost full', rating:'4.7', reviews:'1,330', featured:false, cover:188, crowd:{home:{name:'England',code:'ENG',pct:69},away:{name:'Croatia',code:'CRO'}}},
+  {id:'dalstonyard', name:'Dalston Yard', type:'Warehouse bar', neigh:'Dalston', lat:51.5461, lng:-0.0750, walk:'8 min walk', matchKey:'arg-alg', matchLabel:'Argentina v Algeria', kickoff:'11:00pm', features:['Outdoor screen','Open late','Walk-ins','Big screen'], featureKeys:['outdoor','late','walkins','bigscreen'], capacity:'Filling up', rating:'4.8', reviews:'1,890', featured:false, cover:132, crowd:{home:{name:'Argentina',code:'ARG',pct:63},away:{name:'Algeria',code:'ALG'}}},
+  {id:'wharf', name:'Wharf & Whistle', type:'Gastro pub', neigh:'Canary Wharf', lat:51.5054, lng:-0.0235, walk:'6 min walk', matchKey:'eng-gha', matchLabel:'England v Ghana', kickoff:'Sat 5:00pm', features:['Full kitchen','Book a table','Family friendly'], featureKeys:['kitchen','book','family'], capacity:'Some space', rating:'4.6', reviews:'540', featured:false, cover:210, crowd:{home:{name:'England',code:'ENG',pct:77},away:{name:'Ghana',code:'GHA'}}},
+];
+
+const CAP_COLORS = {
+  'Filling up':{color:'#8A5A00',background:'#FFF0D1'},
+  'Almost full':{color:'#9A2A2A',background:'#FBE3E0'},
+  'Some space':{color:'#0A6B45',background:'#DDF4E8'},
+};
+
+function coverBg(hue){return `repeating-linear-gradient(135deg,hsl(${hue},42%,16%),hsl(${hue},42%,16%) 16px,hsl(${hue},38%,22%) 16px,hsl(${hue},38%,22%) 32px)`;}
+
+/* ---------------- STATE ---------------- */
+let state = { match:'all', area:'all', filters:new Set(), picks:{}, active:null };
+const markers = {};
+let map;
+
+/* ---------------- BUILD STATIC UI ---------------- */
+function fillSelect(el, opts, valKey, labKey){
+  el.innerHTML = opts.map(o=>`<option value="${o[valKey]}">${o[labKey]}</option>`).join('');
+}
+fillSelect(document.getElementById('matchSel'), MATCHES,'key','label');
+fillSelect(document.getElementById('matchSelHero'), MATCHES,'key','label');
+const AREAS = [{key:'all',label:'All London'},...[...new Set(VENUES.map(v=>v.neigh))].sort().map(n=>({key:n,label:n}))];
+fillSelect(document.getElementById('areaSel'), AREAS,'key','label');
+
+document.getElementById('fxRail').innerHTML = FIXTURES.map(fx=>`
+  <div class="fx">
+    <div class="fx-top">
+      <div class="fx-flags"><span>${F[fx.home]}</span><span class="v">v</span><span>${F[fx.away]}</span></div>
+      <span class="fx-grp">${fx.group}</span>
+    </div>
+    <div class="fx-title">${fx.title}</div>
+    <div class="fx-bot">
+      <span class="fx-time">${fx.time}</span>
+      <span class="badge ${fx.late?'late':'tonight'}">${fx.late?'Late':'Tonight'}</span>
+    </div>
+  </div>`).join('');
+
+document.getElementById('chips').innerHTML = CHIPS.map(c=>`
+  <button class="chip" data-key="${c.key}" onclick="toggleFilter('${c.key}')">${c.label}</button>`).join('');
+
+/* ---------------- EVENTS ---------------- */
+document.getElementById('matchSel').addEventListener('change',e=>{state.match=e.target.value;document.getElementById('matchSelHero').value=e.target.value;render();});
+document.getElementById('matchSelHero').addEventListener('change',e=>{state.match=e.target.value;document.getElementById('matchSel').value=e.target.value;render();});
+document.getElementById('areaSel').addEventListener('change',e=>{state.area=e.target.value;render();});
+
+function toggleFilter(key){
+  state.filters.has(key)?state.filters.delete(key):state.filters.add(key);
+  document.querySelector(`.chip[data-key="${key}"]`).classList.toggle('on');
+  render();
+}
+function pick(id,side){
+  state.picks[id]=state.picks[id]===side?null:side;
+  render(); setActive(id);
+}
+
+/* ---------------- FILTER ---------------- */
+function visible(){
+  return VENUES.filter(v=>
+    (state.match==='all'||v.matchKey===state.match) &&
+    (state.area==='all'||v.neigh===state.area) &&
+    [...state.filters].every(k=>v.featureKeys.includes(k))
+  ).sort((a,b)=>(b.featured?1:0)-(a.featured?1:0));
+}
+
+/* ---------------- RENDER ---------------- */
+function render(){
+  const list = visible();
+  document.getElementById('count').innerHTML = `<b>${list.length}</b> venue${list.length!==1?'s':''} showing`;
+  const numById = {};
+  list.forEach((v,i)=>numById[v.id]=i+1);
+
+  const el = document.getElementById('list');
+  if(!list.length){
+    el.innerHTML = `<div class="card" style="cursor:default;padding:34px;text-align:center"><div style="font-size:28px">🔍</div><div class="cname" style="font-size:20px;margin-top:8px">No venues match that combination</div><p class="cmeta">Try removing a filter, or switch to “All matches”.</p></div>`;
+  } else {
+    el.innerHTML = list.map(v=>{
+      const p = state.picks[v.id];
+      let h = v.crowd.home.pct; if(p==='home')h=Math.min(94,h+4); else if(p==='away')h=Math.max(6,h-4);
+      const a = 100-h;
+      const cap = CAP_COLORS[v.capacity];
+      const isActive = state.active===v.id;
+      return `<article class="card ${isActive?'active':''}" data-id="${v.id}" onclick="focusVenue('${v.id}')">
+        <div class="cover" style="background:${coverBg(v.cover)}">
+          <div class="ph">venue photo</div>
+          ${v.featured?'<span class="feat-badge">★ Featured</span>':''}
+          <span class="neigh-badge">${v.neigh}</span>
+          <span class="mapnum">${numById[v.id]}</span>
+        </div>
+        <div class="cbody">
+          <div class="ctop">
+            <h3 class="cname">${v.name}</h3>
+            <div class="rating"><span class="star">★</span><b>${v.rating}</b><span class="rev">· ${v.reviews}</span></div>
+          </div>
+          <div class="cmeta">${v.type} · ${v.neigh} · ${v.walk}</div>
+          <div class="showtonight">
+            <span class="d"></span><span class="tag">Showing tonight</span>
+            <span class="mt">${v.matchLabel}</span><span class="ko">${v.kickoff}</span>
+          </div>
+          <div class="features">
+            ${v.features.map(f=>`<span class="feat">${f}</span>`).join('')}
+            <span class="cap" style="color:${cap.color};background:${cap.background}">${v.capacity}</span>
+          </div>
+          <div class="crowd">
+            <div class="crowd-h"><span class="l">Crowd backing</span><span class="r">who's in tonight</span></div>
+            <div class="bar"><div class="home" style="width:${h}%"></div><div class="away" style="width:${a}%"></div></div>
+            <div class="crowd-pct">
+              <span class="s"><span class="fl">${F[v.crowd.home.code]}</span>${v.crowd.home.code} ${h}%</span>
+              <span class="s" style="color:var(--soft)">${a}% ${v.crowd.away.code}<span class="fl">${F[v.crowd.away.code]}</span></span>
+            </div>
+            <div class="imin">
+              <span class="l">I'm in for</span>
+              <button class="pill ${p==='home'?'sel':''}" onclick="event.stopPropagation();pick('${v.id}','home')"><span>${F[v.crowd.home.code]}</span>${v.crowd.home.code}</button>
+              <button class="pill ${p==='away'?'sel':''}" onclick="event.stopPropagation();pick('${v.id}','away')"><span>${F[v.crowd.away.code]}</span>${v.crowd.away.code}</button>
+              ${p?`<span class="picklbl">You're backing ${p==='home'?v.crowd.home.name:v.crowd.away.name}</span>`:''}
+            </div>
+          </div>
+          <div class="cta">
+            <button class="reserve" onclick="event.stopPropagation();alert('Booking flow — prototype')">Reserve</button>
+            <button class="dir" onclick="event.stopPropagation();openDirections('${v.id}')">Get directions</button>
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+  }
+  updateMarkers(list, numById);
+}
+
+/* ---------------- MAP ---------------- */
+function initMap(){
+  map = L.map('map',{scrollWheelZoom:false}).setView([51.505,-0.09],12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap, © CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  VENUES.forEach(v=>{
+    const m = L.marker([v.lat,v.lng],{icon:makeIcon(v,'?')}).addTo(map);
+    m.bindPopup(`<div class="pop-name">${v.name}</div><div class="pop-meta">${v.type} · ${v.neigh} · ${v.kickoff}</div><span class="pop-link" onclick="scrollToCard('${v.id}')">See details →</span>`);
+    m.on('click',()=>setActive(v.id));
+    markers[v.id]=m;
+  });
+}
+function makeIcon(v,num){
+  const active = state.active===v.id;
+  return L.divIcon({className:'',html:`<div class="pin ${v.featured?'feat':''} ${active?'active':''}">${num}</div>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-16]});
+}
+function updateMarkers(list,numById){
+  const visibleIds = new Set(list.map(v=>v.id));
+  VENUES.forEach(v=>{
+    const m = markers[v.id];
+    const elm = m.getElement();
+    if(elm) elm.style.display = visibleIds.has(v.id)?'':'none';
+    m.setIcon(makeIcon(v, numById[v.id]||'?'));
+  });
+}
+function focusVenue(id){
+  const v = VENUES.find(x=>x.id===id);
+  setActive(id);
+  map.flyTo([v.lat,v.lng],14,{duration:.6});
+  markers[id].openPopup();
+}
+function setActive(id){
+  state.active=id;
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active',c.dataset.id===id));
+  const list = visible(); const numById={}; list.forEach((v,i)=>numById[v.id]=i+1);
+  VENUES.forEach(v=>markers[v.id].setIcon(makeIcon(v,numById[v.id]||'?')));
+}
+function scrollToCard(id){
+  setActive(id);
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function openDirections(id){
+  const v = VENUES.find(x=>x.id===id);
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${v.lat},${v.lng}`,'_blank');
+}
+
+/* ---------------- VENUE SIGNUP FLOW ---------------- */
+// Mock "Google Maps" results — selecting one prepopulates venue details.
+const GMAPS = [
+  {name:'The Crown & Volley', address:'48 Rivington St, Shoreditch, EC2A 3QP', neigh:'Shoreditch', rating:'4.6', reviews:'820', type:'pub'},
+  {name:'Goalmouth Tavern', address:'12 Old Compton St, Soho, W1D 4TQ', neigh:'Soho', rating:'4.4', reviews:'1,110', type:'bar'},
+  {name:'The Rooftop SE15', address:'95 Rye Ln, Peckham, SE15 4ST', neigh:'Peckham', rating:'4.9', reviews:'2,430', type:'rooftop'},
+  {name:'Brixton Beerworks', address:'7 Atlantic Rd, Brixton, SW9 8HX', neigh:'Brixton', rating:'4.7', reviews:'640', type:'beerhall'},
+  {name:'The Camden Cannon', address:'210 Camden High St, Camden, NW1 8QR', neigh:'Camden', rating:'4.3', reviews:'520', type:'pub'},
+  {name:'Wharfside Sports Lounge', address:'1 Canada Sq, Canary Wharf, E14 5AB', neigh:'Canary Wharf', rating:'4.5', reviews:'390', type:'sportsbar'},
+];
+
+const VENUE_TYPES = [
+  {key:'pub',ic:'🍺',label:'Pub'},
+  {key:'sportsbar',ic:'📺',label:'Sports bar'},
+  {key:'bar',ic:'🍸',label:'Bar / Cocktail'},
+  {key:'restaurant',ic:'🍽️',label:'Restaurant'},
+  {key:'rooftop',ic:'🌆',label:'Rooftop'},
+  {key:'beerhall',ic:'🍻',label:'Beer hall'},
+  {key:'event',ic:'🎪',label:'Event space'},
+  {key:'other',ic:'➕',label:'Other'},
+];
+
+const OFFER_OPTS = [
+  {key:'bigscreen',label:'Big screen'},
+  {key:'outdoor',label:'Outdoor / garden screen'},
+  {key:'late',label:'Open late / overnight games'},
+  {key:'kitchen',label:'Full kitchen'},
+  {key:'walkins',label:'Walk-ins welcome'},
+  {key:'book',label:'Table bookings'},
+  {key:'family',label:'Family friendly'},
+];
+
+const SU_STEPS = ['Find your venue','Venue type','What you offer','About you'];
+let su = { step:0, venue:null, type:null, offers:new Set(), contact:{} };
+
+function openSignup(){
+  su = { step:0, venue:null, type:null, offers:new Set(), contact:{} };
+  document.getElementById('signup').classList.add('show');
+  document.body.style.overflow='hidden';
+  suRender();
+}
+function closeSignup(){
+  document.getElementById('signup').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+function suProgress(){
+  const total = SU_STEPS.length;
+  const done = su.step; // steps completed
+  return Math.round(((done)/(total))*100);
+}
+
+function suRender(){
+  const total = SU_STEPS.length;
+  document.getElementById('suStepsLbl').textContent =
+    su.step<total ? `Step ${su.step+1} of ${total} · ${SU_STEPS[su.step]}` : 'All done';
+  document.getElementById('suFill').style.width =
+    (su.step<total ? Math.round((su.step/total)*100) : 100) + '%';
+
+  const back = document.getElementById('suBack');
+  const next = document.getElementById('suNext');
+  back.disabled = su.step===0;
+  back.style.display = su.step<total ? '' : 'none';
+  next.style.display = su.step<total ? '' : 'none';
+  next.textContent = su.step===total-1 ? 'Submit listing' : 'Continue';
+  next.disabled = !suCanAdvance();
+
+  const I = document.getElementById('suInner');
+  if(su.step===0) I.innerHTML = suStep1();
+  else if(su.step===1) I.innerHTML = suStep2();
+  else if(su.step===2) I.innerHTML = suStep3();
+  else if(su.step===3) I.innerHTML = suStep4();
+  else I.innerHTML = suDone();
+
+  if(su.step===0) setTimeout(()=>{const i=document.getElementById('suSearch'); if(i) i.focus();},50);
+  if(su.step===3) suBindContact();
+}
+
+function suCanAdvance(){
+  if(su.step===0) return !!su.venue;
+  if(su.step===1) return !!su.type;
+  if(su.step===2) return true; // offers optional
+  if(su.step===3) return su.contact.name && su.contact.email;
+  return false;
+}
+
+/* Step 1 — search + mock Google autocomplete */
+function suStep1(){
+  return `<div class="su-eyebrow">Get found by fans</div>
+    <h1 class="su-h">Find your venue</h1>
+    <p class="su-sub">Search your venue name and we'll pull the address and details straight from Google Maps — no typing it all out.</p>
+    <div class="su-field">
+      <label>Venue name</label>
+      <div class="su-search-wrap">
+        <input class="su-input" id="suSearch" autocomplete="off" placeholder="Start typing, e.g. The Crown…" oninput="suSearchInput(this.value)" value="${su.venue?su.venue.name:''}">
+        <div id="suSuggest"></div>
+      </div>
+    </div>
+    <div class="su-gmaps-card ${su.venue?'show':''}" id="suGmapsCard">${su.venue?suVenueCard():''}</div>`;
+}
+function suSearchInput(q){
+  const box = document.getElementById('suSuggest');
+  q = q.trim().toLowerCase();
+  if(q.length<1){ box.innerHTML=''; return; }
+  const hits = GMAPS.filter(g=>g.name.toLowerCase().includes(q)).slice(0,5);
+  if(!hits.length){ box.innerHTML=''; return; }
+  box.innerHTML = `<div class="su-suggest">${hits.map(g=>{
+    const i = GMAPS.indexOf(g);
+    return `<div class="su-suggest-item" onclick="suSelectVenue(${i})">
+      <button class="pin">📍</button>
+      <div><div class="nm">${g.name}</div><div class="ad">${g.address}</div></div>
+    </div>`;}).join('')}</div>`;
+}
+function suSelectVenue(i){
+  su.venue = {...GMAPS[i]};
+  su.type = su.type || GMAPS[i].type; // prefill type from Google category
+  suRender();
+}
+function suVenueCard(){
+  const v = su.venue;
+  return `<span class="badge-g">✓ Pulled from Google Maps</span>
+    <div class="gname">${v.name}</div>
+    <div class="grow">📍 ${v.address}</div>
+    <div class="grow"><span class="star">★</span> ${v.rating} · ${v.reviews} reviews · ${v.neigh}</div>
+    <button class="su-edit" onclick="su.venue=null;suRender()">↺ Search a different venue</button>`;
+}
+
+/* Step 2 — venue type */
+function suStep2(){
+  return `<div class="su-eyebrow">${su.venue?su.venue.name:''}</div>
+    <h1 class="su-h">What type of venue?</h1>
+    <p class="su-sub">This helps fans filter and find the right spot. Pick the closest match.</p>
+    <div class="su-grid">
+      ${VENUE_TYPES.map(t=>`<button class="su-opt ${su.type===t.key?'sel':''}" onclick="su.type='${t.key}';suRender()">
+        <span class="ic">${t.ic}</span><span class="ti">${t.label}</span></button>`).join('')}
+    </div>`;
+}
+
+/* Step 3 — what you offer */
+function suStep3(){
+  return `<div class="su-eyebrow">${su.venue?su.venue.name:''}</div>
+    <h1 class="su-h">What can fans expect?</h1>
+    <p class="su-sub">Tick everything you've got. These become the filters fans use to choose you. (Optional — you can edit later.)</p>
+    <div style="margin-top:24px">
+      ${OFFER_OPTS.map(o=>`<div class="su-check ${su.offers.has(o.key)?'sel':''}" onclick="suToggleOffer('${o.key}')">
+        <span class="box">${su.offers.has(o.key)?'✓':''}</span><span class="lbl">${o.label}</span></div>`).join('')}
+    </div>`;
+}
+function suToggleOffer(k){ su.offers.has(k)?su.offers.delete(k):su.offers.add(k); suRender(); }
+
+/* Step 4 — about you */
+function suStep4(){
+  const c = su.contact;
+  return `<div class="su-eyebrow">Last step</div>
+    <h1 class="su-h">Tell us about you</h1>
+    <p class="su-sub">So we can set up your listing and get in touch to confirm. We'll never share your details.</p>
+    <div class="su-row2">
+      <div class="su-field"><label>Your name</label><input class="su-input" id="cName" placeholder="Alex Smith" value="${c.name||''}"></div>
+      <div class="su-field"><label>Your role</label><input class="su-input" id="cRole" placeholder="Owner / Manager" value="${c.role||''}"></div>
+    </div>
+    <div class="su-row2">
+      <div class="su-field"><label>Email</label><input class="su-input" id="cEmail" type="email" placeholder="you@venue.com" value="${c.email||''}"></div>
+      <div class="su-field"><label>Mobile</label><input class="su-input" id="cPhone" type="tel" placeholder="07…" value="${c.phone||''}"></div>
+    </div>`;
+}
+function suBindContact(){
+  ['Name','Role','Email','Phone'].forEach(f=>{
+    const el = document.getElementById('c'+f);
+    if(el) el.addEventListener('input',e=>{ su.contact[f.toLowerCase()]=e.target.value; document.getElementById('suNext').disabled=!suCanAdvance(); });
+  });
+}
+
+/* Done */
+function suDone(){
+  const typeLabel = (VENUE_TYPES.find(t=>t.key===su.type)||{}).label||'';
+  return `<div class="su-done">
+    <div class="tick">✓</div>
+    <h1 class="su-h">You're on the list!</h1>
+    <p class="su-sub" style="margin-left:auto;margin-right:auto">We've created a draft listing for <b>${su.venue.name}</b> (${typeLabel}, ${su.venue.neigh}). We'll email <b>${su.contact.email}</b> within 24 hours to confirm your fixtures and go live — free.</p>
+    <button class="su-next" style="margin:28px auto 0;display:block" onclick="closeSignup()">Done</button>
+  </div>`;
+}
+
+function suNext(){
+  if(!suCanAdvance()) return;
+  su.step++;
+  document.querySelector('.su-body').scrollTop=0;
+  suRender();
+}
+function suPrev(){ if(su.step>0){ su.step--; suRender(); } }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && document.getElementById('signup').classList.contains('show')) closeSignup(); });
+
+/* ---------------- INIT ---------------- */
+initMap();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MatchDay — Where to watch the World Cup in London</title>
+
+<!-- Leaflet map (free, no API key) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root{
+    --ink:#0A1A33;        /* floodlit-night navy */
+    --ink-2:#12294D;
+    --pitch:#00B368;      /* grass green, primary */
+    --pitch-deep:#008A4F;
+    --amber:#FFB22E;      /* matchday gold */
+    --amber-deep:#E8950C;
+    --paper:#F6F7F4;
+    --card:#FFFFFF;
+    --line:#E6E8E2;
+    --ink-soft:#5C6B81;
+    --ink-mute:#8C97A8;
+    --shadow:0 1px 2px rgba(10,26,51,.06), 0 8px 24px rgba(10,26,51,.06);
+    --shadow-lg:0 12px 40px rgba(10,26,51,.16);
+    --r:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* ---------- NAV ---------- */
+  .nav{
+    position:sticky;top:0;z-index:1000;
+    background:rgba(246,247,244,.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{
+    max-width:1280px;margin:0 auto;padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-family:'Archivo',sans-serif;font-weight:900;font-size:21px;letter-spacing:-.02em;}
+  .logo .ball{
+    width:26px;height:26px;border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 38%, #fff 0 34%, transparent 35%),
+      var(--ink);
+    box-shadow:inset 0 0 0 2px var(--pitch);
+    display:grid;place-items:center;flex:none;
+  }
+  .logo .ball::after{content:"";width:7px;height:7px;background:var(--ink);clip-path:polygon(50% 0,100% 38%,82% 100%,18% 100%,0 38%);}
+  .logo b{color:var(--pitch);}
+  .nav-right{display:flex;align-items:center;gap:10px;}
+  .area-pick{
+    display:flex;align-items:center;gap:7px;font-weight:600;font-size:14px;
+    padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:var(--card);
+  }
+  .area-pick .dot{width:7px;height:7px;border-radius:50%;background:var(--pitch);}
+  .btn-list{
+    background:var(--ink);color:#fff;font-weight:700;font-size:14px;
+    padding:10px 16px;border-radius:999px;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .btn-list:hover{background:var(--ink-2);transform:translateY(-1px);}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:
+      radial-gradient(1100px 380px at 78% -40%, rgba(0,179,104,.20), transparent 60%),
+      radial-gradient(900px 360px at 6% -30%, rgba(255,178,46,.16), transparent 55%),
+      linear-gradient(180deg,var(--ink) 0%, var(--ink-2) 100%);
+    color:#fff;position:relative;overflow:hidden;
+  }
+  /* faint pitch lines */
+  .hero::before{
+    content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
+    background:
+      linear-gradient(90deg, transparent 49.6%, #fff 49.7%, #fff 50.3%, transparent 50.4%),
+      radial-gradient(circle at 50% 120%, transparent 78px, #fff 79px, #fff 81px, transparent 82px);
+  }
+  .hero-inner{max-width:1280px;margin:0 auto;padding:54px 24px 26px;position:relative;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:16px;
+  }
+  .eyebrow .live{
+    width:8px;height:8px;border-radius:50%;background:#FF4D4D;
+    box-shadow:0 0 0 0 rgba(255,77,77,.6);animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(255,77,77,0);}100%{box-shadow:0 0 0 0 rgba(255,77,77,0);}}
+  h1.hero-h{
+    font-family:'Archivo',sans-serif;font-weight:900;
+    font-size:clamp(38px,6.4vw,76px);line-height:.94;letter-spacing:-.025em;
+    text-transform:uppercase;margin:0 0 14px;max-width:14ch;
+  }
+  h1.hero-h em{color:var(--pitch);font-style:normal;}
+  .hero-sub{font-size:17px;color:#C8D2E0;max-width:48ch;margin:0 0 26px;}
+  .hero-sub b{color:#fff;font-weight:600;}
+
+  /* search bar */
+  .searchbar{
+    display:flex;flex-wrap:wrap;gap:10px;background:#fff;border-radius:16px;
+    padding:10px;box-shadow:var(--shadow-lg);max-width:760px;
+  }
+  .search-field{flex:1 1 200px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;}
+  .search-field:not(:last-child){border-right:1px solid var(--line);}
+  .search-field svg{flex:none;}
+  .search-field label{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-mute);}
+  .search-field input,.search-field select{
+    border:none;outline:none;font-family:inherit;font-size:15px;font-weight:600;color:var(--ink);
+    width:100%;background:none;padding:1px 0;cursor:pointer;
+  }
+  .search-go{
+    background:var(--pitch);color:#fff;font-weight:800;font-size:15px;
+    padding:0 24px;border-radius:11px;display:flex;align-items:center;gap:8px;
+    transition:background .12s ease, transform .12s ease;
+  }
+  .search-go:hover{background:var(--pitch-deep);transform:translateY(-1px);}
+
+  /* ticker */
+  .ticker-wrap{margin-top:26px;border-top:1px solid rgba(255,255,255,.12);padding-top:16px;}
+  .ticker-label{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:9px;}
+  .ticker{display:flex;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);}
+  .ticker-track{display:flex;gap:10px;animation:scroll 38s linear infinite;}
+  .ticker:hover .ticker-track{animation-play-state:paused;}
+  @media(prefers-reduced-motion:reduce){.ticker-track{animation:none;}}
+  @keyframes scroll{to{transform:translateX(-50%);}}
+  .fix{
+    display:flex;align-items:center;gap:11px;white-space:nowrap;flex:none;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;
+  }
+  .fix .t{font-family:'IBM Plex Mono',monospace;color:#fff;font-weight:600;font-size:13px;}
+  .fix .late{color:var(--amber);font-size:10px;font-weight:800;letter-spacing:.05em;border:1px solid var(--amber);border-radius:5px;padding:2px 5px;}
+  .fix .vs{color:var(--ink-mute);font-weight:500;}
+
+  /* ---------- FILTER BAR ---------- */
+  .filterbar{position:sticky;top:65px;z-index:900;background:var(--paper);border-bottom:1px solid var(--line);}
+  .filter-inner{max-width:1280px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .match-select{
+    display:flex;align-items:center;gap:8px;background:var(--ink);color:#fff;
+    border-radius:999px;padding:9px 8px 9px 15px;font-weight:700;font-size:14px;flex:none;
+  }
+  .match-select select{background:none;border:none;color:#fff;font-family:inherit;font-weight:700;font-size:14px;outline:none;cursor:pointer;padding:2px 6px;}
+  .match-select select option{color:#000;}
+  .chips{display:flex;gap:9px;flex-wrap:wrap;}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    border:1px solid var(--line);background:var(--card);border-radius:999px;
+    padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--ink);
+    transition:all .12s ease;
+  }
+  .chip:hover{border-color:var(--ink-mute);}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .chip.on .ico{filter:grayscale(1) brightness(3);}
+  .result-count{margin-left:auto;font-size:13.5px;color:var(--ink-soft);font-weight:600;flex:none;}
+  .result-count b{color:var(--ink);}
+
+  /* ---------- LAYOUT ---------- */
+  .layout{max-width:1280px;margin:0 auto;padding:22px 24px 60px;display:grid;grid-template-columns:1fr 480px;gap:26px;align-items:start;}
+  .list{display:flex;flex-direction:column;gap:16px;}
+
+  /* venue card */
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    overflow:hidden;display:grid;grid-template-columns:150px 1fr;
+    box-shadow:var(--shadow);transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease;cursor:pointer;
+  }
+  .card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);}
+  .card.active{border-color:var(--pitch);box-shadow:0 0 0 2px rgba(0,179,104,.25), var(--shadow-lg);}
+  .card.feat{border-color:var(--amber);}
+  .cover{
+    position:relative;min-height:170px;display:grid;place-items:center;
+    color:#fff;font-size:40px;
+  }
+  .cover .area-tag{
+    position:absolute;left:9px;bottom:9px;font-size:11px;font-weight:700;
+    background:rgba(10,26,51,.62);backdrop-filter:blur(4px);
+    padding:4px 9px;border-radius:7px;letter-spacing:.02em;
+  }
+  .feat-badge{
+    position:absolute;top:9px;left:9px;display:flex;align-items:center;gap:5px;
+    background:var(--amber);color:var(--ink);font-size:10.5px;font-weight:800;
+    letter-spacing:.04em;text-transform:uppercase;padding:4px 8px;border-radius:7px;
+  }
+  .card-body{padding:15px 17px 16px;display:flex;flex-direction:column;gap:9px;min-width:0;}
+  .card-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .venue-name{font-family:'Archivo',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.01em;line-height:1.1;}
+  .venue-meta{font-size:12.5px;color:var(--ink-soft);font-weight:500;margin-top:2px;}
+  .dist{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-mute);font-weight:600;flex:none;}
+  .showing{
+    display:flex;align-items:center;gap:9px;background:var(--paper);
+    border-radius:9px;padding:8px 11px;font-size:13px;font-weight:600;
+  }
+  .showing .scr{color:var(--pitch-deep);}
+  .showing .kick{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);margin-left:auto;flex:none;}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag{font-size:11.5px;font-weight:600;color:var(--ink-soft);background:#fff;border:1px solid var(--line);border-radius:7px;padding:3px 8px;display:inline-flex;gap:4px;align-items:center;}
+  .tag.late{color:var(--amber-deep);border-color:#FBE3B4;background:#FFF8EC;}
+
+  /* crowd backing — the signature feature */
+  .backing{border-top:1px dashed var(--line);padding-top:11px;}
+  .backing-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+  .backing-h span{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-mute);}
+  .add-allegiance{font-size:12px;font-weight:700;color:var(--pitch-deep);display:flex;align-items:center;gap:4px;}
+  .add-allegiance:hover{text-decoration:underline;}
+  .bar{height:9px;border-radius:6px;overflow:hidden;display:flex;background:var(--line);}
+  .bar span{height:100%;transition:flex-basis .35s ease;}
+  .backers{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px;}
+  .backer{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;}
+  .backer .pct{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-mute);}
+
+  .card-cta{display:flex;gap:9px;margin-top:3px;}
+  .cta{flex:1;text-align:center;font-weight:700;font-size:13.5px;padding:9px;border-radius:9px;transition:all .12s ease;}
+  .cta.book{background:var(--pitch);color:#fff;}
+  .cta.book:hover{background:var(--pitch-deep);}
+  .cta.call{background:var(--card);color:var(--ink);border:1px solid var(--line);}
+  .cta.call:hover{border-color:var(--ink);}
+  .cap{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;}
+  .cap .d{width:7px;height:7px;border-radius:50%;}
+
+  /* map */
+  .map-col{position:sticky;top:130px;height:calc(100vh - 152px);min-height:520px;}
+  #map{width:100%;height:100%;border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--shadow);}
+  .leaflet-container{font-family:'Inter',sans-serif;background:#eef0ec;}
+  .pin{
+    display:grid;place-items:center;width:34px;height:34px;border-radius:50% 50% 50% 2px;
+    transform:rotate(45deg);background:var(--ink);box-shadow:0 3px 8px rgba(10,26,51,.35);
+    border:2px solid #fff;
+  }
+  .pin>span{transform:rotate(-45deg);font-size:15px;}
+  .pin.feat{background:var(--amber);}
+  .pin.active{background:var(--pitch);transform:rotate(45deg) scale(1.18);z-index:1000;}
+  .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:var(--shadow-lg);}
+  .leaflet-popup-content{margin:13px 15px;}
+  .pop-name{font-family:'Archivo',sans-serif;font-weight:800;font-size:16px;}
+  .pop-meta{font-size:12.5px;color:var(--ink-soft);margin:2px 0 7px;}
+  .pop-link{font-size:13px;font-weight:700;color:var(--pitch-deep);}
+
+  /* ---------- HOW IT WORKS / monetise footer ---------- */
+  .strip{background:var(--ink);color:#fff;margin-top:0;}
+  .strip-inner{max-width:1280px;margin:0 auto;padding:54px 24px;}
+  .strip h2{font-family:'Archivo',sans-serif;font-weight:900;font-size:clamp(26px,3.6vw,40px);letter-spacing:-.02em;text-transform:uppercase;margin:0 0 8px;}
+  .strip h2 em{color:var(--amber);font-style:normal;}
+  .strip-sub{color:#B9C4D4;max-width:54ch;margin:0 0 34px;font-size:16px;}
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .tier{background:var(--ink-2);border:1px solid rgba(255,255,255,.10);border-radius:var(--r);padding:24px;}
+  .tier .num{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber);font-weight:600;letter-spacing:.08em;}
+  .tier h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;margin:10px 0 7px;}
+  .tier p{color:#AEB9CA;font-size:14px;margin:0 0 14px;line-height:1.55;}
+  .tier .price{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:#fff;border-top:1px solid rgba(255,255,255,.1);padding-top:13px;}
+  .tier .price b{color:var(--pitch);}
+
+  footer.foot{max-width:1280px;margin:0 auto;padding:26px 24px 44px;font-size:13px;color:var(--ink-mute);}
+  footer.foot .note{background:#FFF8EC;border:1px solid #FBE3B4;color:#7A5A12;border-radius:10px;padding:11px 14px;font-weight:600;margin-bottom:18px;}
+
+  /* ---------- modal ---------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(10,26,51,.5);backdrop-filter:blur(3px);z-index:2000;display:none;place-items:center;padding:20px;}
+  .modal-bg.show{display:grid;}
+  .modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:26px;box-shadow:var(--shadow-lg);}
+  .modal h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:22px;margin:0 0 4px;}
+  .modal p{color:var(--ink-soft);font-size:14px;margin:0 0 18px;}
+  .modal .field{margin-bottom:13px;}
+  .modal label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-mute);margin-bottom:5px;}
+  .modal input,.modal select{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;font-weight:500;outline:none;}
+  .modal input:focus,.modal select:focus{border-color:var(--pitch);}
+  .modal .submit{width:100%;background:var(--pitch);color:#fff;font-weight:800;font-size:15px;padding:13px;border-radius:11px;margin-top:6px;}
+  .modal .submit:hover{background:var(--pitch-deep);}
+  .modal .x{float:right;font-size:22px;color:var(--ink-mute);line-height:1;margin:-6px -6px 0 0;}
+  .modal .track{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-mute);text-align:center;margin-top:14px;}
+  .confirm{text-align:center;padding:8px 0;}
+  .confirm .tick{width:56px;height:56px;border-radius:50%;background:var(--pitch);color:#fff;display:grid;place-items:center;font-size:30px;margin:0 auto 14px;}
+
+  /* focus visibility */
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.chip:focus-visible{outline:2.5px solid var(--pitch);outline-offset:2px;border-radius:8px;}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .map-col{position:relative;top:0;height:420px;min-height:0;order:-1;}
+    .filterbar{top:64px;}
+  }
+  @media(max-width:560px){
+    .nav-inner{padding:12px 16px;}
+    .area-pick{display:none;}
+    .hero-inner{padding:38px 16px 22px;}
+    .filter-inner,.layout,.strip-inner,.foot{padding-left:16px;padding-right:16px;}
+    .card{grid-template-columns:1fr;}
+    .cover{min-height:120px;}
+    .tiers{grid-template-columns:1fr;}
+    .result-count{order:5;margin-left:0;width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="#"><span class="ball"></span>Match<b>Day</b></a>
+    <div class="nav-right">
+      <div class="area-pick"><span class="dot"></span>London <svg width="11" height="7" viewBox="0 0 11 7"><path d="M1 1l4.5 4.5L10 1" stroke="#5C6B81" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></div>
+      <button class="btn-list" onclick="openModal('list')">List your venue</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="live"></span>Group stage live · 11 Jun – 19 Jul</span>
+    <h1 class="hero-h">Where to watch<br>the <em>World Cup</em></h1>
+    <p class="hero-sub">Every pub, bar and kitchen in London showing the football — filtered by <b>your match</b>, outdoor screens, late licences and which nation the crowd's backing.</p>
+
+    <div class="searchbar" role="search">
+      <div class="search-field">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 1C5.7 1 3 3.7 3 7c0 4.5 6 10 6 10s6-5.5 6-10c0-3.3-2.7-6-6-6z" stroke="#00B368" stroke-width="1.5" fill="none"/><circle cx="9" cy="7" r="2.2" fill="#00B368"/></svg>
+        <div><label>Where</label><input value="Shoreditch, London" aria-label="Location" /></div>
+      </div>
+      <div class="search-field">
+        <svg width="18" height="18" viewBox="0 0 18 18"><rect x="2" y="3" width="14" height="13" rx="2" stroke="#0A1A33" stroke-width="1.5" fill="none"/><path d="M2 7h14M6 1.5v3M12 1.5v3" stroke="#0A1A33" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div><label>When</label><input value="Tonight" aria-label="When" /></div>
+      </div>
+      <div class="search-field">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="#0A1A33" stroke-width="1.5" fill="none"/><path d="M9 4v5l3 2" stroke="#0A1A33" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>
+        <div><label>Match</label><input value="Any fixture" aria-label="Match" /></div>
+      </div>
+      <button class="search-go" onclick="document.querySelector('.filterbar').scrollIntoView({behavior:'smooth'})">
+        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" stroke="#fff" stroke-width="1.8" fill="none"/><path d="M11 11l3.5 3.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Find screens
+      </button>
+    </div>
+
+    <div class="ticker-wrap">
+      <div class="ticker-label">Kicking off (UK time) — note the late ones</div>
+      <div class="ticker"><div class="ticker-track" id="ticker"></div></div>
+    </div>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filterbar">
+  <div class="filter-inner">
+    <div class="match-select">
+      <svg width="15" height="15" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6" stroke="#fff" stroke-width="1.4" fill="none"/><path d="M7.5 3.5l2.4 1.8-.9 2.8H6l-.9-2.8z" fill="#fff"/></svg>
+      <span>Showing:</span>
+      <select id="matchFilter" onchange="render()"></select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="result-count" id="count"></div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<main class="layout">
+  <section class="list" id="list" aria-label="Venues showing the World Cup"></section>
+  <aside class="map-col"><div id="map"></div></aside>
+</main>
+
+<!-- MONETISE / HOW IT WORKS -->
+<section class="strip">
+  <div class="strip-inner">
+    <h2>Put your venue <em>on the map</em></h2>
+    <p class="strip-sub">Thousands of fans search for a screen before kickoff. Get found, fill tables on quiet group-stage nights, and only pay for what works.</p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="num">01 · VISIBILITY</div>
+        <h3>Featured listing</h3>
+        <p>Top of the list for your area and matches, the gold Featured badge, and a highlighted map pin. The simplest way to win the pre-match search.</p>
+        <div class="price">From <b>£49</b> / matchweek</div>
+      </div>
+      <div class="tier">
+        <div class="num">02 · PERFORMANCE</div>
+        <h3>Pay per booking</h3>
+        <p>Take table reservations through MatchDay. We track every booking that originated here, and you pay a small flat fee only when a party actually shows.</p>
+        <div class="price"><b>£1.50</b> per seated booking</div>
+      </div>
+      <div class="tier">
+        <div class="num">03 · MATCHDAY</div>
+        <h3>Nation takeover</h3>
+        <p>Sponsor the crowd-backing spotlight for a fixture — "The home of 🇧🇷 Brazil in London" — across the map and match pages for that game.</p>
+        <div class="price">From <b>£120</b> / fixture</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="note">⚠️ Prototype with sample data. Venue names, fixtures shown, capacity and crowd-backing figures are illustrative placeholders to demonstrate the product — not real listings.</div>
+  <strong>MatchDay</strong> · Where to watch the World Cup · London · Sample build, 16 June 2026
+</footer>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalInner"></div>
+</div>
+
+<script>
+/* ---------------- DATA ---------------- */
+// Fixtures (real 2026 World Cup, times converted to UK / BST = ET+5)
+const FIXTURES = [
+  {id:'fra-sen', a:'France',b:'Senegal', fa:'🇫🇷',fb:'🇸🇳', when:'Tonight 20:00', late:false},
+  {id:'irq-nor', a:'Iraq',b:'Norway', fa:'🇮🇶',fb:'🇳🇴', when:'Tonight 23:00', late:true},
+  {id:'arg-alg', a:'Argentina',b:'Algeria', fa:'🇦🇷',fb:'🇩🇿', when:'Tonight 02:00', late:true},
+  {id:'aut-jor', a:'Austria',b:'Jordan', fa:'🇦🇹',fb:'🇯🇴', when:'Tonight 05:00', late:true},
+  {id:'eng-cro', a:'England',b:'Croatia', fa:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',fb:'🇭🇷', when:'Wed 17 Jun 21:00', late:false},
+  {id:'eng-gha', a:'England',b:'Ghana', fa:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',fb:'🇬🇭', when:'Tue 23 Jun 21:00', late:false},
+];
+const fixById = Object.fromEntries(FIXTURES.map(f=>[f.id,f]));
+
+// Tag metadata
+const TAGS = {
+  outdoor:{label:'Outdoor screen', ico:'🌤️'},
+  late:{label:'Open late', ico:'🌙'},
+  walkin:{label:'Walk-ins', ico:'🚶'},
+  food:{label:'Full kitchen', ico:'🍽️'},
+  bigscreen:{label:'Big screen', ico:'📺'},
+  booking:{label:'Book a table', ico:'📅'},
+};
+
+// Venues (sample data — fictional names, approx London coordinates by area)
+const VENUES = [
+  {id:1, name:'The Penalty Spot', type:'Sports bar', area:'Shoreditch', lat:51.5246, lng:-0.0786, dist:'0.3 km',
+   featured:true, cover:'#0A1A33', emoji:'📺', screens:'12 screens + 1 big screen', cap:{t:'Filling up',c:'#FFB22E'},
+   shows:['eng-cro','eng-gha','fra-sen','irq-nor','arg-alg','aut-jor'], tags:['bigscreen','food','late','booking'],
+   backing:[{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'England',p:74,c:'#1F4FB0'},{f:'🇭🇷',n:'Croatia',p:26,c:'#D02B2B'}]},
+
+  {id:2, name:'Estádio Peckham', type:'Café-bar', area:'Peckham', lat:51.4720, lng:-0.0691, dist:'4.8 km',
+   featured:false, cover:'#008A4F', emoji:'🌴', screens:'Courtyard wall + 4 indoor', cap:{t:'Plenty of space',c:'#00B368'},
+   shows:['fra-sen','eng-cro','arg-alg'], tags:['outdoor','food','walkin','late'],
+   backing:[{f:'🇧🇷',n:'Brazil',p:58,c:'#FFD21E'},{f:'🇸🇳',n:'Senegal',p:42,c:'#1B8A3E'}]},
+
+  {id:3, name:'The Halfway Line', type:'Pub', area:'Clapham', lat:51.4626, lng:-0.1387, dist:'5.6 km',
+   featured:false, cover:'#12294D', emoji:'🍺', screens:'6 screens', cap:{t:'Standing room only',c:'#FF4D4D'},
+   shows:['eng-cro','eng-gha','fra-sen','irq-nor'], tags:['bigscreen','walkin','food'],
+   backing:[{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'England',p:88,c:'#1F4FB0'},{f:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',n:'Scotland',p:12,c:'#1657A8'}]},
+
+  {id:4, name:'La Roja Tapas', type:'Restaurant', area:'Soho', lat:51.5132, lng:-0.1320, dist:'1.1 km',
+   featured:true, cover:'#C0392B', emoji:'🥘', screens:'Dining-room screen + bar', cap:{t:'Filling up',c:'#FFB22E'},
+   shows:['eng-cro','fra-sen','arg-alg'], tags:['food','booking','bigscreen'],
+   backing:[{f:'🇪🇸',n:'Spain',p:67,c:'#E03A3A'},{f:'🇦🇷',n:'Argentina',p:33,c:'#5BB4E5'}]},
+
+  {id:5, name:'Offside Tap Room', type:'Taproom', area:'Dalston', lat:51.5461, lng:-0.0750, dist:'1.9 km',
+   featured:false, cover:'#0A1A33', emoji:'🍻', screens:'Roof terrace + 3 indoor', cap:{t:'Plenty of space',c:'#00B368'},
+   shows:['irq-nor','arg-alg','aut-jor','fra-sen'], tags:['outdoor','late','walkin'],
+   backing:[{f:'🇳🇴',n:'Norway',p:52,c:'#3A6FD0'},{f:'🇦🇷',n:'Argentina',p:48,c:'#5BB4E5'}]},
+
+  {id:6, name:'The Gaffer', type:'Pub', area:'Camden', lat:51.5390, lng:-0.1426, dist:'3.2 km',
+   featured:false, cover:'#12294D', emoji:'⚽', screens:'8 screens', cap:{t:'Filling up',c:'#FFB22E'},
+   shows:['eng-cro','eng-gha','fra-sen','irq-nor','aut-jor'], tags:['bigscreen','walkin','late','food'],
+   backing:[{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'England',p:69,c:'#1F4FB0'},{f:'🇭🇷',n:'Croatia',p:18,c:'#D02B2B'},{f:'🇬🇭',n:'Ghana',p:13,c:'#1B8A3E'}]},
+
+  {id:7, name:'Samba Kitchen', type:'Restaurant', area:'Brixton', lat:51.4613, lng:-0.1156, dist:'5.9 km',
+   featured:false, cover:'#008A4F', emoji:'🥥', screens:'Garden screen + 2 indoor', cap:{t:'Plenty of space',c:'#00B368'},
+   shows:['fra-sen','arg-alg','eng-cro'], tags:['outdoor','food','booking','late'],
+   backing:[{f:'🇧🇷',n:'Brazil',p:81,c:'#FFD21E'},{f:'🇫🇷',n:'France',p:19,c:'#3A6FD0'}]},
+
+  {id:8, name:'Touchline (Wharf)', type:'Sports bar', area:'Canary Wharf', lat:51.5054, lng:-0.0235, dist:'6.4 km',
+   featured:false, cover:'#0A1A33', emoji:'📺', screens:'16 screens + 2 big screens', cap:{t:'Plenty of space',c:'#00B368'},
+   shows:['eng-cro','eng-gha','fra-sen','irq-nor','arg-alg','aut-jor'], tags:['bigscreen','food','booking','walkin'],
+   backing:[{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'England',p:61,c:'#1F4FB0'},{f:'🇫🇷',n:'France',p:22,c:'#3A6FD0'},{f:'🇦🇷',n:'Argentina',p:17,c:'#5BB4E5'}]},
+
+  {id:9, name:'Croeso Bar', type:'Pub', area:'Islington', lat:51.5366, lng:-0.1030, dist:'2.7 km',
+   featured:false, cover:'#12294D', emoji:'🐉', screens:'4 screens', cap:{t:'Filling up',c:'#FFB22E'},
+   shows:['eng-cro','fra-sen','irq-nor'], tags:['walkin','late','food'],
+   backing:[{f:'🏴󠁧󠁢󠁷󠁬󠁳󠁿',n:'Wales',p:55,c:'#C0392B'},{f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'England',p:45,c:'#1F4FB0'}]},
+];
+
+/* ---------------- STATE ---------------- */
+let activeFilters = new Set();
+let activeVenue = null;
+const markers = {};
+let map;
+
+/* ---------------- TICKER ---------------- */
+(function buildTicker(){
+  const t = document.getElementById('ticker');
+  const html = FIXTURES.map(f=>`
+    <div class="fix">
+      <span class="t">${f.when.split(' ').pop()}</span>
+      ${f.late?'<span class="late">LATE</span>':''}
+      <span>${f.fa} ${f.a}</span><span class="vs">v</span><span>${f.b} ${f.fb}</span>
+    </div>`).join('');
+  t.innerHTML = html + html; // duplicate for seamless loop
+})();
+
+/* ---------------- MATCH FILTER OPTIONS ---------------- */
+(function buildMatchOptions(){
+  const sel = document.getElementById('matchFilter');
+  sel.innerHTML = `<option value="all">Any fixture</option>` +
+    FIXTURES.map(f=>`<option value="${f.id}">${f.a} v ${f.b} · ${f.when}</option>`).join('');
+})();
+
+/* ---------------- CHIPS ---------------- */
+(function buildChips(){
+  const c = document.getElementById('chips');
+  c.innerHTML = Object.entries(TAGS).map(([k,v])=>`
+    <button class="chip" data-tag="${k}" onclick="toggleFilter('${k}')">
+      <span class="ico">${v.ico}</span>${v.label}
+    </button>`).join('');
+})();
+
+function toggleFilter(tag){
+  activeFilters.has(tag) ? activeFilters.delete(tag) : activeFilters.add(tag);
+  document.querySelector(`.chip[data-tag="${tag}"]`).classList.toggle('on');
+  render();
+}
+
+/* ---------------- FILTER LOGIC ---------------- */
+function visibleVenues(){
+  const matchId = document.getElementById('matchFilter').value;
+  return VENUES.filter(v=>{
+    if(matchId!=='all' && !v.shows.includes(matchId)) return false;
+    for(const f of activeFilters){ if(!v.tags.includes(f)) return false; }
+    return true;
+  }).sort((a,b)=> (b.featured?1:0)-(a.featured?1:0)); // featured first = monetisation
+}
+
+/* ---------------- RENDER CARDS ---------------- */
+function render(){
+  const list = document.getElementById('list');
+  const venues = visibleVenues();
+  const matchId = document.getElementById('matchFilter').value;
+
+  document.getElementById('count').innerHTML = `<b>${venues.length}</b> venue${venues.length!==1?'s':''} found`;
+
+  if(venues.length===0){
+    list.innerHTML = `<div class="card" style="grid-template-columns:1fr;padding:34px;text-align:center;cursor:default;">
+      <div style="font-size:30px;margin-bottom:8px;">🔍</div>
+      <div class="venue-name">No screens match that combination</div>
+      <p class="venue-meta" style="margin-top:6px;">Try removing a filter — or switch to "Any fixture" to see every venue.</p>
+    </div>`;
+  } else {
+    list.innerHTML = venues.map(v=>{
+      const shownFix = matchId!=='all' ? fixById[matchId] : null;
+      const fixLine = shownFix
+        ? `${shownFix.fa} ${shownFix.a} v ${shownFix.b} ${shownFix.fb}`
+        : `Showing ${v.shows.length} fixtures`;
+      const kick = shownFix ? shownFix.when.replace('Tonight ','') : '';
+      const bar = v.backing.map(x=>`<span style="flex-basis:${x.p}%;background:${x.c};"></span>`).join('');
+      const backers = v.backing.map(x=>`<span class="backer">${x.f} ${x.n} <span class="pct">${x.p}%</span></span>`).join('');
+      const tags = v.tags.map(t=>`<span class="tag ${t==='late'?'late':''}">${TAGS[t].ico} ${TAGS[t].label}</span>`).join('');
+
+      return `<article class="card ${v.featured?'feat':''}" data-id="${v.id}" onclick="focusVenue(${v.id})" tabindex="0"
+                       onkeydown="if(event.key==='Enter')focusVenue(${v.id})">
+        <div class="cover" style="background:linear-gradient(140deg, ${v.cover}, ${v.cover}dd);">
+          ${v.featured?'<span class="feat-badge">★ Featured</span>':''}
+          <span style="opacity:.9;">${v.emoji}</span>
+          <span class="area-tag">📍 ${v.area} · ${v.type}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="venue-name">${v.name}</div>
+              <div class="venue-meta"><span class="cap"><span class="d" style="background:${v.cap.c};"></span>${v.cap.t}</span> · ${v.screens}</div>
+            </div>
+            <span class="dist">${v.dist}</span>
+          </div>
+          <div class="showing">
+            📺 <span class="scr">${fixLine}</span>
+            ${kick?`<span class="kick">${kick}</span>`:''}
+          </div>
+          <div class="tags">${tags}</div>
+          <div class="backing">
+            <div class="backing-h">
+              <span>Crowd backing</span>
+              <button class="add-allegiance" onclick="event.stopPropagation();addAllegiance(${v.id})">＋ I'm in for…</button>
+            </div>
+            <div class="bar">${bar}</div>
+            <div class="backers">${backers}</div>
+          </div>
+          <div class="card-cta">
+            ${v.tags.includes('booking')
+              ? `<button class="cta book" onclick="event.stopPropagation();openModal('book','${v.name.replace(/'/g,"\\'")}')">Reserve a table</button>`
+              : `<button class="cta call" onclick="event.stopPropagation();openModal('call','${v.name.replace(/'/g,"\\'")}')">Call to check space</button>`}
+            <button class="cta call" onclick="event.stopPropagation();focusVenue(${v.id})">View on map</button>
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+  }
+  updateMarkers(venues);
+}
+
+/* ---------------- MAP ---------------- */
+function initMap(){
+  map = L.map('map',{scrollWheelZoom:false}).setView([51.512,-0.09],12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap, © CARTO', subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  VENUES.forEach(v=>{
+    const icon = L.divIcon({
+      className:'', html:`<div class="pin ${v.featured?'feat':''}" data-pinid="${v.id}"><span>${v.featured?'★':v.emoji}</span></div>`,
+      iconSize:[34,34], iconAnchor:[17,33], popupAnchor:[0,-30]
+    });
+    const m = L.marker([v.lat,v.lng],{icon}).addTo(map);
+    m.bindPopup(`<div class="pop-name">${v.name}</div>
+       <div class="pop-meta">${v.area} · ${v.type} · ${v.screens}</div>
+       <a class="pop-link" href="#" onclick="event.preventDefault();scrollToCard(${v.id})">See details →</a>`);
+    m.on('click',()=>setActive(v.id));
+    markers[v.id] = m;
+  });
+}
+function updateMarkers(venues){
+  const visibleIds = new Set(venues.map(v=>v.id));
+  VENUES.forEach(v=>{
+    const el = markers[v.id].getElement();
+    if(el) el.style.display = visibleIds.has(v.id) ? '' : 'none';
+  });
+}
+function focusVenue(id){
+  const v = VENUES.find(x=>x.id===id);
+  setActive(id);
+  map.flyTo([v.lat,v.lng],14,{duration:.6});
+  markers[id].openPopup();
+  document.querySelector('.map-col').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function setActive(id){
+  activeVenue = id;
+  document.querySelectorAll('.card').forEach(c=>c.classList.toggle('active', +c.dataset.id===id));
+  Object.entries(markers).forEach(([mid,m])=>{
+    const el=m.getElement(); if(el){ const pin=el.querySelector('.pin'); if(pin) pin.classList.toggle('active', +mid===id);}
+  });
+}
+function scrollToCard(id){
+  setActive(id);
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  if(card) card.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ---------------- ALLEGIANCE (signature interaction) ---------------- */
+function addAllegiance(id){
+  const v = VENUES.find(x=>x.id===id);
+  // simulate the user adding a vote: bump the top backer, renormalise
+  v.backing[0].p = Math.min(95, v.backing[0].p + 4);
+  const total = v.backing.reduce((s,x)=>s+x.p,0);
+  v.backing.forEach(x=> x.p = Math.round(x.p/total*100));
+  render();
+  setActive(id);
+}
+
+/* ---------------- MODAL ---------------- */
+function openModal(kind, venue){
+  const m = document.getElementById('modalInner');
+  if(kind==='book'){
+    m.innerHTML = `<button class="x" onclick="closeModal()">×</button>
+      <h3>Reserve at ${venue}</h3>
+      <p>Hold a table for the match. The venue confirms by text.</p>
+      <div class="field"><label>Match</label><select>${FIXTURES.map(f=>`<option>${f.a} v ${f.b} · ${f.when}</option>`).join('')}</select></div>
+      <div class="field"><label>Party size</label><select><option>2</option><option>4</option><option>6</option><option>8+</option></select></div>
+      <div class="field"><label>Your mobile</label><input placeholder="07…" /></div>
+      <button class="submit" onclick="confirmBooking('${venue.replace(/'/g,"\\'")}')">Request table</button>
+      <div class="track">booking origination → matchday/ref · attributed to venue</div>`;
+  } else if(kind==='call'){
+    m.innerHTML = `<button class="x" onclick="closeModal()">×</button>
+      <h3>Check space at ${venue}</h3>
+      <p>This venue takes walk-ins and isn't on instant booking yet. Give them a quick call before you head over.</p>
+      <div class="field"><label>Phone</label><input value="020 7xxx xxxx" readonly /></div>
+      <button class="submit" onclick="closeModal()">Got it</button>
+      <div class="track">tap-to-call tracked as a lead → attributed to venue</div>`;
+  } else if(kind==='list'){
+    m.innerHTML = `<button class="x" onclick="closeModal()">×</button>
+      <h3>List your venue</h3>
+      <p>Showing the World Cup? Get found by fans searching tonight. Free to list, upgrade to Featured any time.</p>
+      <div class="field"><label>Venue name</label><input placeholder="The Crown & Volley" /></div>
+      <div class="field"><label>Area</label><input placeholder="Shoreditch" /></div>
+      <div class="field"><label>What have you got?</label><select><option>Big screen + outdoor</option><option>Indoor screens</option><option>Full kitchen + screens</option></select></div>
+      <button class="submit" onclick="confirmBooking('','list')">Claim your listing</button>
+      <div class="track">we'll set up your fixtures feed and opening hours</div>`;
+  }
+  document.getElementById('modalBg').classList.add('show');
+}
+function confirmBooking(venue, kind){
+  const m = document.getElementById('modalInner');
+  m.innerHTML = `<div class="confirm">
+    <div class="tick">✓</div>
+    <h3>${kind==='list'?'Listing claimed':'Request sent'}</h3>
+    <p>${kind==='list'
+        ? "We'll be in touch to finish your profile and connect a fixtures feed."
+        : 'The venue will confirm by text shortly. See you at kickoff.'}</p>
+    <button class="submit" onclick="closeModal()">Done</button>
+    ${kind!=='list'?'<div class="track">✓ origination recorded · this booking is attributed to '+venue+'</div>':''}
+  </div>`;
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('show'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeModal(); });
+
+/* ---------------- INIT ---------------- */
+initMap();
+render();
+</script>
+</body>
+</html>
