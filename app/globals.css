@@ -1,27 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+.leaflet-container { font-family: 'Inter', sans-serif; }
+.leaflet-popup-content { font-family: 'Inter', sans-serif; font-size: 13px; }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+.wtw-rail::-webkit-scrollbar { height: 8px; }
+.wtw-rail::-webkit-scrollbar-thumb { background: rgba(10,26,51,0.18); border-radius: 999px; }
+.wtw-rail::-webkit-scrollbar-track { background: transparent; }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@keyframes wtwPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(0.8); }
 }
+.wtw-pulse { animation: wtwPulse 1.4s infinite; }
+.wtw-pulse-fast { animation: wtwPulse 1.2s infinite; }
+.wtw-pulse-slow { animation: wtwPulse 1.6s infinite; }
