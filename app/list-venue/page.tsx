@@ -324,7 +324,7 @@ export default function ListVenuePage() {
         venue_name: dName, venue_address: dAddress, venue_area: dArea,
         venue_phone: dPhone, venue_email: dEmail, venue_website: dWebsite,
         venue_type: venueType,
-        hours: JSON.stringify(hours),
+        hours: hours,
         contact_first: cFirst, contact_last: cLast, contact_role: cRole,
         contact_email: cEmail, contact_mobile: `${dialCode} ${cMobile}`,
         setup_tags: Object.keys(setupTags).filter(k => setupTags[k]),
