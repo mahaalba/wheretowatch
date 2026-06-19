@@ -431,7 +431,7 @@ export default function Page() {
             </span>
           </div>
           <div style={{ flex: 1 }} />
-          <a href="/list-your-venue" style={{ textDecoration: 'none', background: C.navy, color: C.white, borderRadius: 999, padding: '10px 18px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, letterSpacing: 0.2 }}>
+          <a href="/list-venue" style={{ textDecoration: 'none', background: C.navy, color: C.white, borderRadius: 999, padding: '10px 18px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, letterSpacing: 0.2 }}>
             List your venue
           </a>
         </div>
@@ -650,7 +650,7 @@ export default function Page() {
             <p style={{ fontSize: 16, color: '#9AABC2', margin: '20px 0 0', lineHeight: 1.5 }}>Pack out your pub this World Cup. Get found by thousands of fans searching for somewhere to watch tonight.</p>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <a href="/list-your-venue" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '15px 26px', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, display: 'inline-block' }}>List your venue for free</a>
+            <a href="/list-venue" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '15px 26px', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, display: 'inline-block' }}>List your venue for free</a>
             <button style={{ background: 'transparent', color: C.white, border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 12, padding: '15px 26px', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>How it works</button>
           </div>
         </div>
