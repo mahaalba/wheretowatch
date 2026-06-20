@@ -416,9 +416,9 @@ export default function ListVenuePage() {
           <div>
             <div style={{ fontFamily: FM, fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.darkGreen }}>For venues · List with Where We Watch</div>
             <h1 style={{ fontFamily: FB, fontWeight: 700, fontSize: 'clamp(26px,5vw,34px)', lineHeight: 1.18, margin: '16px 0 0', letterSpacing: '-0.01em' }}>
-              Join <span style={{ color: C.green }}>Where We Watch</span>, the UK's largest sports-viewing directory, in just three minutes
+              Join <span style={{ color: C.green }}>Where We Watch</span>, the UK&apos;s largest sports-viewing directory, in just three minutes
             </h1>
-            <p style={{ fontSize: 16, color: C.textMuted, margin: '20px 0 0', fontWeight: 600 }}>With Where We Watch you'll be able to:</p>
+            <p style={{ fontSize: 16, color: C.textMuted, margin: '20px 0 0', fontWeight: 600 }}>With Where We Watch you&apos;ll be able to:</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
               {BENEFITS.map(b => (
                 <div key={b.emoji} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -466,13 +466,13 @@ export default function ListVenuePage() {
 
             {venueQuery.trim().length >= 2 && suggestions.length === 0 && !detailsRevealed && (
               <button onClick={() => { setDetailsRevealed(true); setVenueQuery(''); }} style={{ marginTop: 14, background: 'transparent', border: 'none', fontFamily: FB, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer', padding: 0 }}>
-                Can't find your business? <span style={{ color: C.green, fontWeight: 700 }}>Add it manually</span>
+                Can&apos;t find your business? <span style={{ color: C.green, fontWeight: 700 }}>Add it manually</span>
               </button>
             )}
 
             {venueQuery.trim().length === 0 && !detailsRevealed && (
               <button onClick={() => { setDetailsRevealed(true); }} style={{ marginTop: 14, background: 'transparent', border: 'none', fontFamily: FB, fontSize: 14, fontWeight: 600, color: C.navy, cursor: 'pointer', padding: 0 }}>
-                Can't find your business? <span style={{ color: C.green, fontWeight: 700 }}>Add it manually</span>
+                Can&apos;t find your business? <span style={{ color: C.green, fontWeight: 700 }}>Add it manually</span>
               </button>
             )}
 
@@ -588,7 +588,7 @@ export default function ListVenuePage() {
         {step === 3 && (
           <div>
             <h2 style={{ fontFamily: FB, fontWeight: 700, fontSize: 26, margin: 0, letterSpacing: '-0.01em' }}>About you</h2>
-            <p style={{ fontSize: 15, color: C.textMuted, margin: '8px 0 0' }}>This isn't shown publicly — it's just so we can reach you.</p>
+            <p style={{ fontSize: 15, color: C.textMuted, margin: '8px 0 0' }}>This isn&apos;t shown publicly — it&apos;s just so we can reach you.</p>
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180 }}>
@@ -745,7 +745,7 @@ export default function ListVenuePage() {
             <p style={{ fontSize: 16, color: C.textMuted, margin: '14px 0 0', lineHeight: 1.5 }}>Check your inbox to confirm your email address. If you don&apos;t see it within a few minutes, have a quick look in your spam or junk folder.</p>
 
             <div style={{ marginTop: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, boxShadow: '0 8px 24px rgba(10,26,51,0.05)' }}>
-              {summaryTop.map((r, i) => (
+              {summaryTop.map((r) => (
                 <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '9px 0', borderBottom: `1px solid ${C.borderMid}` }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: C.textFaint, flexShrink: 0 }}>{r.label}</span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: C.navy, textAlign: 'right' }}>{r.value}</span>
