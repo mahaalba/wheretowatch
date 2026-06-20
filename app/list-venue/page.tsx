@@ -414,11 +414,11 @@ export default function ListVenuePage() {
         {/* Step 0: Benefits */}
         {isBenefits && (
           <div>
-            <div style={{ fontFamily: FM, fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.darkGreen }}>For venues · List with Where To Watch</div>
+            <div style={{ fontFamily: FM, fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.darkGreen }}>For venues · List with Where We Watch</div>
             <h1 style={{ fontFamily: FB, fontWeight: 700, fontSize: 'clamp(26px,5vw,34px)', lineHeight: 1.18, margin: '16px 0 0', letterSpacing: '-0.01em' }}>
-              Join <span style={{ color: C.green }}>Where To Watch</span>, the UK's largest sports-viewing directory, in just three minutes
+              Join <span style={{ color: C.green }}>Where We Watch</span>, the UK's largest sports-viewing directory, in just three minutes
             </h1>
-            <p style={{ fontSize: 16, color: C.textMuted, margin: '20px 0 0', fontWeight: 600 }}>With Where To Watch you'll be able to:</p>
+            <p style={{ fontSize: 16, color: C.textMuted, margin: '20px 0 0', fontWeight: 600 }}>With Where We Watch you'll be able to:</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 18 }}>
               {BENEFITS.map(b => (
                 <div key={b.emoji} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -797,7 +797,7 @@ export default function ListVenuePage() {
           </div>
           <div>
             {isDone ? (
-              <Link href="/" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '13px 24px', fontFamily: FB, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,179,104,0.28)', display: 'inline-block' }}>Explore Where To Watch →</Link>
+              <Link href="/" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '13px 24px', fontFamily: FB, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,179,104,0.28)', display: 'inline-block' }}>Explore Where We Watch →</Link>
             ) : (
               <button onClick={next} disabled={isWizard && !canContinue} style={primaryBtnStyle(isWizard && !canContinue)}>{primaryLabel}</button>
             )}

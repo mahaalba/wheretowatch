@@ -427,7 +427,7 @@ export default function Page() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 13, height: 13, borderRadius: 999, background: C.green, boxShadow: '0 0 0 4px rgba(0,179,104,0.18)' }} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 22, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              Where To <span style={{ color: C.green }}>Watch</span>
+              Where We <span style={{ color: C.green }}>Watch</span>
             </span>
           </div>
           <div style={{ flex: 1 }} />
@@ -455,7 +455,7 @@ export default function Page() {
             World Cup · group stage live · 11 Jun – 19 Jul
           </div>
           <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(36px, 5.2vw, 62px)', lineHeight: 1.02, letterSpacing: 0.3, textTransform: 'uppercase', margin: '16px 0 0', maxWidth: '20ch' }}>
-            Where to watch the <span style={{ color: C.green }}>World Cup</span>
+            Where we watch the <span style={{ color: C.green }}>World Cup</span>
           </h1>
           <p style={{ fontSize: 17, color: C.textBlue, margin: '16px 0 0', maxWidth: '54ch', lineHeight: 1.5 }}>
             Last minute? Find a venue showing World Cup games in seconds.
@@ -656,7 +656,7 @@ export default function Page() {
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ maxWidth: 1400, margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 0.5, textTransform: 'uppercase' }}>Where To <span style={{ color: C.green }}>Watch</span></span>
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, letterSpacing: 0.5, textTransform: 'uppercase' }}>Where We <span style={{ color: C.green }}>Watch</span></span>
             <span style={{ fontSize: 13, color: '#7C8AA0' }}>London · 2026 World Cup · Map data © OpenStreetMap, © CARTO</span>
           </div>
         </div>
