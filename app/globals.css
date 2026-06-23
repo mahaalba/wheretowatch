@@ -33,3 +33,7 @@ input::placeholder, textarea::placeholder { color: #9AA3B0; }
   100% { outline: 3px solid rgba(255,178,46,0);    outline-offset: 0px; }
 }
 .wtw-highlight { animation: wtwCardHighlight 0.65s ease-out forwards; }
+
+/* Hide scrollbar on carousel track across all browsers */
+.wtw-carousel::-webkit-scrollbar { display: none; }
+.wtw-carousel { -ms-overflow-style: none; scrollbar-width: none; }

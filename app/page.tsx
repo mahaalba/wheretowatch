@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import type { VenuePin } from './components/MapView';
+import PhotoCarousel from './components/PhotoCarousel';
 import { supabase } from '@/lib/supabase';
 
 const MapView = dynamic(() => import('./components/MapView'), { ssr: false });
@@ -111,7 +112,7 @@ interface Venue {
   phone?: string; email?: string; website?: string;
   bookingMethod: string; capacity: number; setupTags: string[];
   isFeatured: boolean; verified: boolean; listingScope: string; claimed: boolean;
-  hue: number; space: Space; priceLevel: string;
+  hue: number; space: Space; priceLevel: string; photos: string[];
   gamesPolicy: string; bookable: string; bookingUrl?: string;
   primaryFixture: FixtureLink | null; allFixtures: FixtureLink[];
 }
@@ -128,7 +129,8 @@ interface RawDbVenue {
   phone?: string; email?: string; website?: string; booking_method?: string;
   capacity?: number; setup_tags?: string[]; price_level?: string;
   is_featured?: boolean; verified?: boolean; listing_scope?: string; claimed?: boolean;
-  bookable?: string; booking_url?: string;
+  bookable?: string; booking_url?: string; photo_url?: string;
+  venue_photos?: Array<{ photo_url: string; display_order: number }>;
   venue_fixtures?: RawVenueFixture[];
 }
 
@@ -166,6 +168,12 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
     bookable: raw.bookable ?? 'unknown',
     bookingUrl: raw.booking_url ?? undefined,
     priceLevel: raw.price_level ?? '',
+    photos: (raw.venue_photos ?? [])
+      .sort((a, b) => a.display_order - b.display_order)
+      .map(p => p.photo_url)
+      .concat(
+        !(raw.venue_photos?.length) && raw.photo_url ? [raw.photo_url] : []
+      ),
     primaryFixture, allFixtures,
   };
 }
@@ -283,34 +291,32 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
 
   return (
     <article id={`venue-${v.id}`} onClick={onActivate} style={{ background: C.white, border: `1px solid ${active ? C.green : C.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: active ? `0 0 0 3px rgba(0,179,104,0.2), 0 8px 24px rgba(10,26,51,0.08)` : '0 8px 24px rgba(10,26,51,0.05)', marginBottom: 18, transition: 'box-shadow .2s, border-color .2s', opacity: full ? 0.85 : 1, cursor: 'pointer' }}>
-      {/* Cover */}
-      <div style={{ position: 'relative', height: 188, background: venueStripeGradient(v.hue), filter: full ? 'grayscale(1)' : undefined }}>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)' }}>venue photo</span>
-        </div>
+      {/* Cover — carousel + overlay badges */}
+      <div style={{ position: 'relative', height: 188 }}>
+        <PhotoCarousel photos={v.photos} venueName={v.name} height={188} grayscale={full} />
         {/* Verified badge */}
         {v.verified && (
-          <span style={{ position: 'absolute', top: 12, left: 12, display: 'inline-flex', alignItems: 'center', gap: 5, background: C.green, color: C.white, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 4px 12px rgba(0,0,0,0.18)' }}>
+          <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 6, display: 'inline-flex', alignItems: 'center', gap: 5, background: C.green, color: C.white, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, boxShadow: '0 4px 12px rgba(0,0,0,0.18)' }}>
             ✓ Verified
           </span>
         )}
         {/* Featured badge (only when not verified) */}
         {v.isFeatured && !v.verified && (
-          <span style={{ position: 'absolute', top: 12, left: 12, background: C.amber, color: C.navy, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.18)' }}>★ Featured</span>
+          <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 6, background: C.amber, color: C.navy, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.18)' }}>★ Featured</span>
         )}
         {/* Scope tag */}
         {v.listingScope === 'tournament' && (
-          <span style={{ position: 'absolute', top: v.verified || v.isFeatured ? 44 : 12, left: 12, background: 'rgba(10,26,51,0.72)', color: C.amber, borderRadius: 999, padding: '4px 10px', fontSize: 10, fontWeight: 700, backdropFilter: 'blur(4px)', letterSpacing: 0.3, textTransform: 'uppercase' }}>
+          <span style={{ position: 'absolute', top: v.verified || v.isFeatured ? 44 : 12, left: 12, zIndex: 6, background: 'rgba(10,26,51,0.72)', color: C.amber, borderRadius: 999, padding: '4px 10px', fontSize: 10, fontWeight: 700, backdropFilter: 'blur(4px)', letterSpacing: 0.3, textTransform: 'uppercase' }}>
             World Cup screenings
           </span>
         )}
         {v.listingScope === 'event' && (
-          <span style={{ position: 'absolute', top: v.verified || v.isFeatured ? 44 : 12, left: 12, background: 'rgba(10,26,51,0.72)', color: C.amber, borderRadius: 999, padding: '4px 10px', fontSize: 10, fontWeight: 700, backdropFilter: 'blur(4px)', letterSpacing: 0.3, textTransform: 'uppercase' }}>
+          <span style={{ position: 'absolute', top: v.verified || v.isFeatured ? 44 : 12, left: 12, zIndex: 6, background: 'rgba(10,26,51,0.72)', color: C.amber, borderRadius: 999, padding: '4px 10px', fontSize: 10, fontWeight: 700, backdropFilter: 'blur(4px)', letterSpacing: 0.3, textTransform: 'uppercase' }}>
             Pop-up
           </span>
         )}
-        <span style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(10,26,51,0.72)', color: C.white, borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, backdropFilter: 'blur(4px)' }}>{v.area}</span>
-        <span style={{ position: 'absolute', bottom: 12, left: 12, width: 28, height: 28, borderRadius: 999, background: C.bg, color: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, boxShadow: '0 3px 8px rgba(0,0,0,0.2)' }}>{index + 1}</span>
+        <span style={{ position: 'absolute', top: 12, right: 12, zIndex: 6, background: 'rgba(10,26,51,0.72)', color: C.white, borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, backdropFilter: 'blur(4px)' }}>{v.area}</span>
+        <span style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 6, width: 28, height: 28, borderRadius: 999, background: C.bg, color: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, boxShadow: '0 3px 8px rgba(0,0,0,0.2)' }}>{index + 1}</span>
       </div>
 
       {/* Body */}
@@ -483,7 +489,7 @@ export default function Page() {
       const [venueRes, fixtureRes] = await Promise.all([
         supabase
           .from('venues')
-          .select('*, venue_fixtures(confirmed, games_policy, fixtures(id, home_team, away_team, kickoff_at, status))')
+          .select('*, venue_fixtures(confirmed, games_policy, fixtures(id, home_team, away_team, kickoff_at, status)), venue_photos(photo_url, display_order)')
           .eq('status', 'active')
           .or(`active_until.is.null,active_until.gte.${now}`)
           .order('is_featured', { ascending: false }),
