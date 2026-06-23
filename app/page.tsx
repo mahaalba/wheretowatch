@@ -215,9 +215,7 @@ function BallIcon() {
 function FilterIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 6h13M3 12h9M3 18h5" stroke={C.navy} strokeWidth="2" strokeLinecap="round"/><circle cx="19" cy="6" r="2.4" stroke={C.navy} strokeWidth="2"/><circle cx="15" cy="12" r="2.4" stroke={C.navy} strokeWidth="2"/><circle cx="11" cy="18" r="2.4" stroke={C.navy} strokeWidth="2"/></svg>;
 }
-function ClockIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={C.textMuted} strokeWidth="2"/><path d="M12 7v5l3 2" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-}
+
 
 // ─── Watch-at-home card ───────────────────────────────────────────────────────
 interface WatchAtHomeProps { fixture: DbFixture; kickoff: string; onBrowse: () => void; }
@@ -282,7 +280,6 @@ interface VenueCardProps {
   onActivate: () => void; onReserve: () => void;
 }
 function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCardProps) {
-  const m = SPACE_META[v.space];
   const full = v.space === 'full';
   const tags = v.setupTags.map(k => TAG_LABELS[k] ?? k).filter(Boolean);
 
@@ -325,11 +322,11 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
         </div>
 
-        {/* Availability */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 13, borderRadius: 12, padding: '9px 13px', background: m.bg, color: m.color }}>
+        {/* Availability — hidden until venues can update live */}
+        {/* <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 13, borderRadius: 12, padding: '9px 13px', background: m.bg, color: m.color }}>
           <span className={m.pulse ? 'wtw-pulse-slow' : ''} style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: m.dot }} />
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.2 }}>{m.label}</span>
-        </div>
+        </div> */}
 
         {/* Fixture display — controlled by games_policy */}
         {v.gamesPolicy === 'all_games' ? (
@@ -791,10 +788,11 @@ export default function Page() {
                 : <><strong style={{ color: C.navy }}>{displayList.length}</strong> venues</>}
           </span>
           <div style={{ flex: 1 }} />
-          <button onClick={() => setSpaceOnly(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1.5px solid ${spaceOnly ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '8px 14px', background: spaceOnly ? '#DDF4E8' : C.white, color: spaceOnly ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          {/* Space now filter — hidden until venues can update live */}
+          {/* <button onClick={() => setSpaceOnly(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1.5px solid ${spaceOnly ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '8px 14px', background: spaceOnly ? '#DDF4E8' : C.white, color: spaceOnly ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             <span className={spaceOnly ? 'wtw-pulse-slow' : ''} style={{ width: 8, height: 8, borderRadius: 999, background: spaceOnly ? C.green : C.textMuted, flexShrink: 0 }} />
             Space now
-          </button>
+          </button> */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sort</span>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
@@ -805,10 +803,11 @@ export default function Page() {
             <FilterIcon />Filters{filterCount > 0 ? ` (${filterCount})` : ''}
           </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.textMuted, lineHeight: 1.4 }}>
+        {/* Availability info — hidden until venues can update live */}
+        {/* <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.textMuted, lineHeight: 1.4 }}>
           <ClockIcon />
           <span>Availability is set live by each venue, updated before kickoff and as tables fill. <strong style={{ color: C.greenDark, fontWeight: 700 }}>Space now</strong> means tables free right now.</span>
-        </div>
+        </div> */}
       </section>
 
       {/* ── Results ── */}
