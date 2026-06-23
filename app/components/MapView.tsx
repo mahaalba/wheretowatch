@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { Map as LMap, LayerGroup } from 'leaflet';
+import type { Map as LMap, LayerGroup, Marker } from 'leaflet';
 
 export interface VenuePin {
   id: string;
@@ -34,6 +34,7 @@ export default function MapView({ pins, onPinClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LMap | null>(null);
   const layerRef = useRef<LayerGroup | null>(null);
+  const markersRef = useRef<Record<string, Marker>>({});
   const sigRef = useRef('');
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function MapView({ pins, onPinClick }: Props) {
     import('leaflet').then((L) => {
       if (!layerRef.current || !mapRef.current) return;
       layerRef.current.clearLayers();
+      markersRef.current = {};
       const pts: [number, number][] = [];
 
       pins.forEach((p) => {
@@ -85,10 +87,20 @@ export default function MapView({ pins, onPinClick }: Props) {
         const mk = L.marker(p.coords, { icon }).addTo(layerRef.current!);
         const typeLabel = p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '';
         const meta = [typeLabel, p.priceLevel].filter(Boolean).join(' · ');
-        mk.bindPopup(`<strong>${p.name}</strong>${meta ? `<br>${meta}` : ''}`);
+        mk.bindPopup(
+          `<div style="font-family:inherit;min-width:140px">` +
+          `<strong>${p.name}</strong><br/>` +
+          `<span style="color:#666;font-size:12px">${meta}</span>` +
+          `</div>`
+        );
         mk.on('click', () => onPinClick(p.id));
+        markersRef.current[p.id] = mk;
         pts.push(p.coords);
       });
+
+      // Re-open popup for whichever pin is active after marker rebuild
+      const activePin = pins.find(p => p.active);
+      if (activePin) markersRef.current[activePin.id]?.openPopup();
 
       if (pts.length) {
         try { mapRef.current!.fitBounds(pts, { padding: [50, 50], maxZoom: 14 }); } catch {}

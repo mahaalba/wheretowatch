@@ -486,10 +486,10 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       const now = new Date().toISOString();
-      const [venueRes, fixtureRes] = await Promise.all([
+      const [venueRes, fixtureRes, photosRes] = await Promise.all([
         supabase
           .from('venues')
-          .select('*, venue_fixtures(confirmed, games_policy, fixtures(id, home_team, away_team, kickoff_at, status)), venue_photos(photo_url, display_order)')
+          .select('*, venue_fixtures(confirmed, games_policy, fixtures(id, home_team, away_team, kickoff_at, status))')
           .eq('status', 'active')
           .or(`active_until.is.null,active_until.gte.${now}`)
           .order('is_featured', { ascending: false }),
@@ -499,8 +499,21 @@ export default function Page() {
           .gte('kickoff_at', now)
           .order('kickoff_at', { ascending: true })
           .limit(48),
+        supabase
+          .from('venue_photos')
+          .select('venue_id, photo_url, display_order')
+          .order('display_order', { ascending: true }),
       ]);
-      if (venueRes.data) setRawVenues(venueRes.data as RawDbVenue[]);
+      if (venueRes.data) {
+        // Merge photos into venue rows — works whether or not venue_photos table exists yet
+        const photosByVenue = new Map<string, Array<{ photo_url: string; display_order: number }>>();
+        (photosRes.data ?? []).forEach((p: { venue_id: string; photo_url: string; display_order: number }) => {
+          if (!photosByVenue.has(p.venue_id)) photosByVenue.set(p.venue_id, []);
+          photosByVenue.get(p.venue_id)!.push({ photo_url: p.photo_url, display_order: p.display_order });
+        });
+        const merged = venueRes.data.map(v => ({ ...v, venue_photos: photosByVenue.get(v.id) ?? [] }));
+        setRawVenues(merged as RawDbVenue[]);
+      }
       if (fixtureRes.data) setDbFixtures(fixtureRes.data);
       setLoading(false);
     }
@@ -577,13 +590,15 @@ export default function Page() {
     .map(v => ({ id: v.id, name: v.name, type: v.type, priceLevel: v.priceLevel, space: v.space, kickoff: v.primaryFixture?.kickoff ?? '', coords: [v.lat, v.lng], active: activeVenue === v.id }));
 
   const handlePinClick = useCallback((id: string) => {
-    setActiveVenue(cur => cur === id ? null : id);
-    const el = document.getElementById(`venue-${id}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('wtw-highlight');
-      setTimeout(() => el.classList.remove('wtw-highlight'), 650);
-    }
+    setActiveVenue(id);
+    setTimeout(() => {
+      const el = document.getElementById(`venue-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('wtw-highlight');
+        setTimeout(() => el.classList.remove('wtw-highlight'), 650);
+      }
+    }, 50);
   }, []);
 
   const filterCount = Object.values(filters).filter(Boolean).length + (spaceOnly ? 1 : 0);
