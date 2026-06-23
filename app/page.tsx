@@ -82,9 +82,6 @@ const TYPE_HUE: Record<string, number> = {
 };
 const venueHue = (type: string) => TYPE_HUE[type?.toLowerCase()] ?? 210;
 
-function venueStripeGradient(hue: number) {
-  return `repeating-linear-gradient(135deg, hsl(${hue},42%,16%), hsl(${hue},42%,16%) 16px, hsl(${hue},38%,22%) 16px, hsl(${hue},38%,22%) 32px)`;
-}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Space = 'now' | 'filling' | 'full';

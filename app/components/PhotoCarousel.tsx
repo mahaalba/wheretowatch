@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useRef, useState } from 'react';
 
 const FONT_MONO = "'IBM Plex Mono', monospace";
@@ -61,20 +62,20 @@ export default function PhotoCarousel({ photos, venueName, height = 188, graysca
         }}
       >
         {photos.map((url, i) => (
-          <img
+          <div
             key={url + i}
-            src={url}
-            alt={`${venueName} photo ${i + 1}`}
-            loading={i === 0 ? 'eager' : 'lazy'}
-            draggable={false}
-            style={{
-              flexShrink: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              scrollSnapAlign: 'start',
-            }}
-          />
+            style={{ flexShrink: 0, width: '100%', height: '100%', position: 'relative', scrollSnapAlign: 'start' }}
+          >
+            <Image
+              src={url}
+              alt={`${venueName} photo ${i + 1}`}
+              fill
+              unoptimized
+              priority={i === 0}
+              draggable={false}
+              style={{ objectFit: 'cover' }}
+            />
+          </div>
         ))}
       </div>
 
