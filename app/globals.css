@@ -37,3 +37,13 @@ input::placeholder, textarea::placeholder { color: #9AA3B0; }
 /* Hide scrollbar on carousel track across all browsers */
 .wtw-carousel::-webkit-scrollbar { display: none; }
 .wtw-carousel { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Mobile filter pill row */
+.wtw-filter-pills { display: flex; overflow-x: auto; gap: 8px; -ms-overflow-style: none; scrollbar-width: none; padding-bottom: 2px; }
+.wtw-filter-pills::-webkit-scrollbar { display: none; }

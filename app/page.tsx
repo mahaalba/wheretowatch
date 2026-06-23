@@ -199,6 +199,13 @@ const TAG_LABELS: Record<string, string> = {
   walkins: 'Walk-ins', kitchen: 'Full kitchen', book: 'Book a table',
 };
 
+const MOBILE_FILTERS = [
+  { key: 'outdoor', label: 'Outdoor' },
+  { key: 'walkins', label: 'Chilled' },
+  { key: 'late',    label: 'Late night' },
+  { key: 'book',    label: 'Bookable' },
+];
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function SearchIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="#fff" strokeWidth="2.4"/><path d="M16 16l4.5 4.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round"/></svg>;
@@ -469,6 +476,7 @@ export default function Page() {
   const [spaceOnly, setSpaceOnly] = useState(false);
   const [activeVenue, setActiveVenue] = useState<string | null>(null);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
   const [vw, setVw] = useState(1400);
 
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -531,7 +539,7 @@ export default function Page() {
     return () => clearInterval(id);
   }, []);
 
-  const narrow = vw < 900;
+  const narrow = vw < 768;
 
   // ── Derived data ──
   const venues = useMemo(
@@ -585,6 +593,7 @@ export default function Page() {
 
   const handlePinClick = useCallback((id: string) => {
     setActiveVenue(id);
+    setMobileView('list');
     setTimeout(() => {
       const el = document.getElementById(`venue-${id}`);
       if (el) {
@@ -598,6 +607,7 @@ export default function Page() {
   const filterCount = Object.values(filters).filter(Boolean).length + (spaceOnly ? 1 : 0);
 
   const toggleDraft = (key: string) => setDraftFilters(f => { const n = { ...f }; if (n[key]) delete n[key]; else n[key] = true; return n; });
+  const toggleFilter = (key: string) => setFilters(f => { const n = { ...f }; if (n[key]) delete n[key]; else n[key] = true; return n; });
 
   const scrollToResults = useCallback(() => {
     const el = resultsRef.current;
@@ -608,6 +618,33 @@ export default function Page() {
 
   const draftActiveKeys = Object.keys(draftFilters).filter(k => draftFilters[k] && k !== 'space');
   const draftCount = venues.filter(v => draftActiveKeys.every(k => v.setupTags.includes(k))).length;
+
+  const venueListContent = loading ? (
+    <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
+      <div style={{ fontSize: 32, marginBottom: 16 }}>⚽</div>
+      <div style={{ fontSize: 16, fontWeight: 600 }}>Loading venues…</div>
+    </div>
+  ) : watchAtHome ? (
+    <WatchAtHomeCard fixture={selectedDbFixture!} kickoff={selectedKickoff} onBrowse={() => setActiveMatch('all')} />
+  ) : displayList.length === 0 ? (
+    <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues match</div>
+      <div style={{ fontSize: 14 }}>Try clearing some filters or searching a different area.</div>
+      <button onClick={() => { setFilters({}); setSpaceOnly(false); setActiveMatch('all'); setLocQuery(''); }} style={{ marginTop: 20, background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '12px 24px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+        Clear all filters
+      </button>
+    </div>
+  ) : (
+    <>
+      {isOvernightMatch && <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />}
+      {displayList.map((v, i) => (
+        <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
+          onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
+          onReserve={() => setBookingId(v.id)} />
+      ))}
+    </>
+  );
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: FONT_BODY, color: C.navy, WebkitFontSmoothing: 'antialiased' }}>
@@ -772,87 +809,80 @@ export default function Page() {
       </section>
 
       {/* ── Filter bar ── */}
-      <section style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 24px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.navy, color: C.white, borderRadius: 12, padding: '9px 14px' }}>
-            <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 600 }}>Showing</span>
-            <select value={activeMatch} onChange={e => setActiveMatch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.amber, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
-              {matchOptions.map(o => <option key={o.value} value={o.value} style={{ color: C.navy }}>{o.label}</option>)}
-            </select>
+      <section style={{ maxWidth: 1400, margin: '0 auto', padding: narrow ? '14px 16px 8px' : '20px 24px 8px' }}>
+        {narrow ? (
+          /* ── Mobile: quick-filter pills + list/map toggle ── */
+          <>
+            <div className="wtw-filter-pills" style={{ marginBottom: 12 }}>
+              {MOBILE_FILTERS.map(f => {
+                const active = !!filters[f.key];
+                return (
+                  <button key={f.key} onClick={() => toggleFilter(f.key)} style={{ flexShrink: 0, borderRadius: 999, padding: '8px 16px', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: FONT_BODY, cursor: 'pointer', border: `1.5px solid ${active ? C.green : C.borderHeavy}`, background: active ? '#DDF4E8' : C.white, color: active ? C.greenDark : C.navy, transition: 'all .15s' }}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, background: C.navy, borderRadius: 10, padding: '8px 12px' }}>
+                <select value={activeMatch} onChange={e => setActiveMatch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.amber, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none', minWidth: 0, width: '100%' }}>
+                  {matchOptions.map(o => <option key={o.value} value={o.value} style={{ color: C.navy }}>{o.label}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexShrink: 0, borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${C.borderHeavy}` }}>
+                <button onClick={() => setMobileView('list')} style={{ padding: '8px 15px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: mobileView === 'list' ? C.navy : C.white, color: mobileView === 'list' ? C.white : C.navy, transition: 'all .15s' }}>List</button>
+                <button onClick={() => setMobileView('map')} style={{ padding: '8px 15px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', borderLeft: `1px solid ${C.borderHeavy}`, background: mobileView === 'map' ? C.navy : C.white, color: mobileView === 'map' ? C.white : C.navy, transition: 'all .15s' }}>Map</button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* ── Desktop: existing filter bar ── */
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.navy, color: C.white, borderRadius: 12, padding: '9px 14px' }}>
+              <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 600 }}>Showing</span>
+              <select value={activeMatch} onChange={e => setActiveMatch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.amber, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
+                {matchOptions.map(o => <option key={o.value} value={o.value} style={{ color: C.navy }}>{o.label}</option>)}
+              </select>
+            </div>
+            <span style={{ fontSize: 14, color: C.textSub }}>
+              {loading ? 'Loading…' : watchAtHome
+                ? <span style={{ color: C.amber }}>🌙 closed this late</span>
+                : isOvernightMatch
+                  ? <><strong style={{ color: C.navy }}>{displayList.length}</strong> open late 🌙</>
+                  : <><strong style={{ color: C.navy }}>{displayList.length}</strong> venues</>}
+            </span>
+            <div style={{ flex: 1 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sort</span>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <button onClick={() => { setDraftFilters({ ...filters }); setFiltersOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: filterCount > 0 ? '#DDF4E8' : C.white, border: `1.5px solid ${filterCount > 0 ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '9px 15px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: filterCount > 0 ? C.greenDark : C.navy, cursor: 'pointer' }}>
+              <FilterIcon />Filters{filterCount > 0 ? ` (${filterCount})` : ''}
+            </button>
           </div>
-          <span style={{ fontSize: 14, color: C.textSub }}>
-            {loading ? 'Loading…' : watchAtHome
-              ? <span style={{ color: C.amber }}>🌙 closed this late</span>
-              : isOvernightMatch
-                ? <><strong style={{ color: C.navy }}>{displayList.length}</strong> open late 🌙</>
-                : <><strong style={{ color: C.navy }}>{displayList.length}</strong> venues</>}
-          </span>
-          <div style={{ flex: 1 }} />
-          {/* Space now filter — hidden until venues can update live */}
-          {/* <button onClick={() => setSpaceOnly(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1.5px solid ${spaceOnly ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '8px 14px', background: spaceOnly ? '#DDF4E8' : C.white, color: spaceOnly ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            <span className={spaceOnly ? 'wtw-pulse-slow' : ''} style={{ width: 8, height: 8, borderRadius: 999, background: spaceOnly ? C.green : C.textMuted, flexShrink: 0 }} />
-            Space now
-          </button> */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sort</span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <button onClick={() => { setDraftFilters({ ...filters }); setFiltersOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: filterCount > 0 ? '#DDF4E8' : C.white, border: `1.5px solid ${filterCount > 0 ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '9px 15px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: filterCount > 0 ? C.greenDark : C.navy, cursor: 'pointer' }}>
-            <FilterIcon />Filters{filterCount > 0 ? ` (${filterCount})` : ''}
-          </button>
-        </div>
-        {/* Availability info — hidden until venues can update live */}
-        {/* <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.textMuted, lineHeight: 1.4 }}>
-          <ClockIcon />
-          <span>Availability is set live by each venue, updated before kickoff and as tables fill. <strong style={{ color: C.greenDark, fontWeight: 700 }}>Space now</strong> means tables free right now.</span>
-        </div> */}
+        )}
       </section>
 
       {/* ── Results ── */}
-      <section ref={resultsRef} style={{ maxWidth: 1400, margin: '0 auto', padding: '8px 24px 56px' }}>
-        <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start', flexDirection: narrow ? 'column' : 'row' }}>
-          {/* List */}
-          <div style={{ flex: 1, minWidth: 0, width: narrow ? '100%' : undefined }}>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
-                <div style={{ fontSize: 32, marginBottom: 16 }}>⚽</div>
-                <div style={{ fontSize: 16, fontWeight: 600 }}>Loading venues…</div>
-              </div>
-            ) : watchAtHome ? (
-              <WatchAtHomeCard
-                fixture={selectedDbFixture!}
-                kickoff={selectedKickoff}
-                onBrowse={() => setActiveMatch('all')}
-              />
-            ) : displayList.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues match</div>
-                <div style={{ fontSize: 14 }}>Try clearing some filters or searching a different area.</div>
-                <button onClick={() => { setFilters({}); setSpaceOnly(false); setActiveMatch('all'); setLocQuery(''); }} style={{ marginTop: 20, background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '12px 24px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                  Clear all filters
-                </button>
-              </div>
-            ) : (
-              <>
-                {isOvernightMatch && (
-                  <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />
-                )}
-                {displayList.map((v, i) => (
-                  <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
-                    onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
-                    onReserve={() => setBookingId(v.id)} />
-                ))}
-              </>
-            )}
+      <section ref={resultsRef} style={{ maxWidth: 1400, margin: '0 auto', padding: narrow ? '8px 16px 40px' : '8px 24px 56px' }}>
+        {narrow ? (
+          /* ── Mobile: list OR map (toggled) ── */
+          mobileView === 'map' ? (
+            <div style={{ height: '60vh', borderRadius: 16, overflow: 'hidden' }}>
+              <MapView pins={pins} onPinClick={handlePinClick} />
+            </div>
+          ) : venueListContent
+        ) : (
+          /* ── Desktop: side-by-side ── */
+          <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>{venueListContent}</div>
+            <div style={{ width: '40%', maxWidth: 520, position: 'sticky', top: 88, height: 'calc(100vh - 110px)' }}>
+              <MapView pins={pins} onPinClick={handlePinClick} />
+            </div>
           </div>
-          {/* Map */}
-          <div style={narrow ? { width: '100%', height: 380 } : { width: '40%', maxWidth: 520, position: 'sticky', top: 88, height: 'calc(100vh - 110px)' }}>
-            <MapView pins={pins} onPinClick={handlePinClick} />
-          </div>
-        </div>
+        )}
       </section>
 
       {/* ── Venue CTA ── */}
