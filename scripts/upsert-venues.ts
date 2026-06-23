@@ -73,6 +73,7 @@ function toDbRow(r: Record<string, string>): Record<string, unknown> {
   if (r.opening_times && r.opening_times !== 'unknown') row.opening_times = r.opening_times;
   if (r.price_level)   row.price_level = r.price_level;
   if (r.bookable)      row.bookable = r.bookable;
+  if (r.booking_url)   row.booking_url = r.booking_url;
 
   const lat = parseFloat(r.lat), lng = parseFloat(r.lng);
   if (!isNaN(lat)) row.lat = lat;
