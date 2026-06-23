@@ -24,11 +24,6 @@ const SPACE_COLOR: Record<string, string> = {
   filling: '#E0922A',
   full: '#9AA3B0',
 };
-const SPACE_LABEL: Record<string, string> = {
-  now: 'Space now',
-  filling: 'Filling up',
-  full: 'Full tonight',
-};
 
 export default function MapView({ pins, onPinClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
