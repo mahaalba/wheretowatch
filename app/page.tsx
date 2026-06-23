@@ -57,6 +57,11 @@ function kickoffInfo(isoStr: string): { display: string; koRank: number; late: b
   };
 }
 
+function isOvernight(isoStr: string): boolean {
+  const bstH = (new Date(isoStr).getUTCHours() + 1) % 24;
+  return bstH >= 1 && bstH < 6;
+}
+
 function dayLabel(isoStr: string): string {
   const d = new Date(isoStr);
   const now = new Date();
@@ -198,6 +203,63 @@ function FilterIcon() {
 }
 function ClockIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={C.textMuted} strokeWidth="2"/><path d="M12 7v5l3 2" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+}
+
+// ─── Watch-at-home card ───────────────────────────────────────────────────────
+interface WatchAtHomeProps { fixture: DbFixture; kickoff: string; onBrowse: () => void; }
+function WatchAtHomeCard({ fixture, kickoff, onBrowse }: WatchAtHomeProps) {
+  const STARS: Array<[number, number, number]> = [
+    [40,22,1.8],[110,14,1.2],[190,30,1.5],[270,10,1],[340,24,1.8],
+    [75,70,1.2],[200,60,1.5],[300,75,1],[155,88,1.8],[370,55,1.2],
+  ];
+  return (
+    <div style={{ background: C.navy, borderRadius: 20, overflow: 'hidden', marginBottom: 18 }}>
+      {/* Starfield header */}
+      <div style={{ position: 'relative', height: 148, background: 'linear-gradient(160deg, #060F1F 0%, #0E2244 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} viewBox="0 0 400 148" preserveAspectRatio="xMidYMid slice">
+          {STARS.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill="rgba(255,255,255,0.45)" />)}
+        </svg>
+        <span style={{ fontSize: 34, position: 'relative' }}>🌙</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 26, position: 'relative' }}>
+          <span>{flagFor(fixture.home_team)}</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>v</span>
+          <span>{flagFor(fixture.away_team)}</span>
+        </div>
+      </div>
+      {/* Body */}
+      <div style={{ padding: '20px 22px 24px' }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, color: C.white, textTransform: 'uppercase', letterSpacing: 0.4, lineHeight: 1.05, marginBottom: 8 }}>
+          {fixture.home_team} v {fixture.away_team}
+        </div>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 600, color: C.amber, marginBottom: 16 }}>
+          Kicks off {kickoff} UK time
+        </div>
+        <p style={{ fontSize: 14, color: C.textBlue, lineHeight: 1.65, margin: '0 0 22px' }}>
+          Most venues are closed this late — this one&apos;s best enjoyed from the sofa. Snacks optional, staying up mandatory.
+        </p>
+        <button onClick={onBrowse} style={{ width: '100%', background: 'rgba(255,255,255,0.09)', color: C.white, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 12, padding: '12px 20px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.2 }}>
+          Browse earlier games instead
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Late-night banner ────────────────────────────────────────────────────────
+function LateNightBanner({ kickoff, count }: { kickoff: string; count: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 13, background: 'rgba(255,178,46,0.07)', border: '1px solid rgba(255,178,46,0.32)', borderRadius: 16, padding: '14px 18px', marginBottom: 20 }}>
+      <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1.1 }}>🌙</span>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>
+          Only {count === 1 ? 'one place is' : `${count} places are`} open this late
+        </div>
+        <div style={{ fontSize: 13, color: C.textSub, marginTop: 3, lineHeight: 1.45 }}>
+          These venues confirmed they&apos;ll be showing this {kickoff} kickoff. Worth booking ahead.
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Venue card ───────────────────────────────────────────────────────────────
@@ -465,7 +527,14 @@ export default function Page() {
   else if (sortBy === 'kickoff') list = [...list].sort((a, b) => (a.primaryFixture?.koRank ?? 9999) - (b.primaryFixture?.koRank ?? 9999));
   else list = [...list].sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
 
-  const pins: VenuePin[] = list
+  // ── Overnight treatment ──
+  const selectedDbFixture = activeMatch !== 'all' ? (dbFixtures.find(f => f.id === activeMatch) ?? null) : null;
+  const isOvernightMatch = selectedDbFixture ? isOvernight(selectedDbFixture.kickoff_at) : false;
+  const displayList = isOvernightMatch ? list.filter(v => v.setupTags.includes('late')) : list;
+  const watchAtHome = isOvernightMatch && displayList.length === 0;
+  const selectedKickoff = selectedDbFixture ? kickoffInfo(selectedDbFixture.kickoff_at).display : '';
+
+  const pins: VenuePin[] = displayList
     .filter(v => v.lat && v.lng)
     .map(v => ({ id: v.id, name: v.name, space: v.space, kickoff: v.primaryFixture?.kickoff ?? '', coords: [v.lat, v.lng], active: activeVenue === v.id }));
 
@@ -655,7 +724,11 @@ export default function Page() {
             </select>
           </div>
           <span style={{ fontSize: 14, color: C.textSub }}>
-            {loading ? 'Loading…' : <><strong style={{ color: C.navy }}>{list.length}</strong> venues</>}
+            {loading ? 'Loading…' : watchAtHome
+              ? <span style={{ color: C.amber }}>🌙 closed this late</span>
+              : isOvernightMatch
+                ? <><strong style={{ color: C.navy }}>{displayList.length}</strong> open late 🌙</>
+                : <><strong style={{ color: C.navy }}>{displayList.length}</strong> venues</>}
           </span>
           <div style={{ flex: 1 }} />
           <button onClick={() => setSpaceOnly(s => !s)} style={{ display: 'flex', alignItems: 'center', gap: 7, border: `1.5px solid ${spaceOnly ? C.green : C.borderHeavy}`, borderRadius: 12, padding: '8px 14px', background: spaceOnly ? '#DDF4E8' : C.white, color: spaceOnly ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
@@ -688,7 +761,13 @@ export default function Page() {
                 <div style={{ fontSize: 32, marginBottom: 16 }}>⚽</div>
                 <div style={{ fontSize: 16, fontWeight: 600 }}>Loading venues…</div>
               </div>
-            ) : list.length === 0 ? (
+            ) : watchAtHome ? (
+              <WatchAtHomeCard
+                fixture={selectedDbFixture!}
+                kickoff={selectedKickoff}
+                onBrowse={() => setActiveMatch('all')}
+              />
+            ) : displayList.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
                 <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues match</div>
@@ -697,11 +776,18 @@ export default function Page() {
                   Clear all filters
                 </button>
               </div>
-            ) : list.map((v, i) => (
-              <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
-                onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
-                onReserve={() => setBookingId(v.id)} />
-            ))}
+            ) : (
+              <>
+                {isOvernightMatch && (
+                  <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />
+                )}
+                {displayList.map((v, i) => (
+                  <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
+                    onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
+                    onReserve={() => setBookingId(v.id)} />
+                ))}
+              </>
+            )}
           </div>
           {/* Map */}
           <div style={narrow ? { width: '100%', height: 380 } : { width: '40%', maxWidth: 520, position: 'sticky', top: 88, height: 'calc(100vh - 110px)' }}>
