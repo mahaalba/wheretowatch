@@ -1,5 +1,7 @@
 // Upsert venue photos from photos.csv into the venue_photos table.
-// Also writes the cover photo (display_order 0) to venues.photo_url.
+// photos.csv must contain columns: venue_name, photo_name, display_order
+// where photo_name is the Places resource name (places/.../photos/...).
+// The stored photo_url is /api/photo?name=... so URLs never expire.
 //
 // Run after fetch_photos.py has produced photos.csv:
 //   npx tsx scripts/upsert-photos.ts
@@ -57,7 +59,7 @@ function parseCSV(text: string): Record<string, string>[] {
 async function main() {
   const csvPath =
     process.env.PHOTOS_CSV_PATH ??
-    path.resolve(process.cwd(), '../Downloads/wherewewatch_enrichment/photos.csv');
+    path.resolve(process.env.HOME ?? '/Users/mahaalba', 'Downloads/wherewewatch_enrichment/photos.csv');
 
   if (!fs.existsSync(csvPath)) {
     console.error(`❌ CSV not found: ${csvPath}\n   Set PHOTOS_CSV_PATH env var to override.`);
@@ -75,13 +77,18 @@ async function main() {
     (venues ?? []).map(v => [v.name.toLowerCase().trim(), v.id])
   );
 
-  // Group rows by venue
+  // Group rows by venue; build proxy URL from photo_name
   type PhotoRow = { photo_url: string; display_order: number };
   const byVenue = new Map<string, PhotoRow[]>();
   for (const row of rows) {
+    const photoName = (row.photo_name ?? '').trim();
+    if (!photoName) { console.warn(`  ⚠  row missing photo_name for "${row.venue_name}" — skipping`); continue; }
     const k = row.venue_name.toLowerCase().trim();
     if (!byVenue.has(k)) byVenue.set(k, []);
-    byVenue.get(k)!.push({ photo_url: row.photo_url, display_order: parseInt(row.display_order, 10) });
+    byVenue.get(k)!.push({
+      photo_url: `/api/photo?name=${encodeURIComponent(photoName)}`,
+      display_order: parseInt(row.display_order, 10),
+    });
   }
 
   let updated = 0, skipped = 0, errors = 0;
