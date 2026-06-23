@@ -74,6 +74,10 @@ function toDbRow(r: Record<string, string>): Record<string, unknown> {
   if (r.price_level)   row.price_level = r.price_level;
   if (r.bookable)      row.bookable = r.bookable;
 
+  const lat = parseFloat(r.lat), lng = parseFloat(r.lng);
+  if (!isNaN(lat)) row.lat = lat;
+  if (!isNaN(lng)) row.lng = lng;
+
   // Strip undefined keys so Supabase doesn't try to null them out
   return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined));
 }

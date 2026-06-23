@@ -27,3 +27,9 @@ input::placeholder, textarea::placeholder { color: #9AA3B0; }
 .wtw-pulse { animation: wtwPulse 1.4s infinite; }
 .wtw-pulse-fast { animation: wtwPulse 1.2s infinite; }
 .wtw-pulse-slow { animation: wtwPulse 1.6s infinite; }
+
+@keyframes wtwCardHighlight {
+  0%   { outline: 3px solid rgba(255,178,46,0.85); outline-offset: 0px; }
+  100% { outline: 3px solid rgba(255,178,46,0);    outline-offset: 0px; }
+}
+.wtw-highlight { animation: wtwCardHighlight 0.65s ease-out forwards; }

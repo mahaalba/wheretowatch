@@ -20,6 +20,8 @@ const FONT_MONO = "'IBM Plex Mono', monospace";
 const FONT_DISPLAY = "'Anton', sans-serif";
 const FONT_BODY = "'Inter', system-ui, sans-serif";
 
+const capitalise = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
 // ─── Team flags ───────────────────────────────────────────────────────────────
 const TEAM_FLAGS: Record<string, string> = {
   'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
@@ -109,7 +111,7 @@ interface Venue {
   phone?: string; email?: string; website?: string;
   bookingMethod: string; capacity: number; setupTags: string[];
   isFeatured: boolean; verified: boolean; listingScope: string; claimed: boolean;
-  hue: number; space: Space;
+  hue: number; space: Space; priceLevel: string;
   gamesPolicy: string; bookable: string; bookingUrl?: string;
   primaryFixture: FixtureLink | null; allFixtures: FixtureLink[];
 }
@@ -124,7 +126,7 @@ interface RawDbVenue {
   id: string; name: string; type?: string; area?: string;
   lat?: number; lng?: number;
   phone?: string; email?: string; website?: string; booking_method?: string;
-  capacity?: number; setup_tags?: string[];
+  capacity?: number; setup_tags?: string[]; price_level?: string;
   is_featured?: boolean; verified?: boolean; listing_scope?: string; claimed?: boolean;
   bookable?: string; booking_url?: string;
   venue_fixtures?: RawVenueFixture[];
@@ -163,6 +165,7 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
     gamesPolicy: vfLinks[0]?.games_policy ?? 'unknown',
     bookable: raw.bookable ?? 'unknown',
     bookingUrl: raw.booking_url ?? undefined,
+    priceLevel: raw.price_level ?? '',
     primaryFixture, allFixtures,
   };
 }
@@ -279,7 +282,7 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
   const tags = v.setupTags.map(k => TAG_LABELS[k] ?? k).filter(Boolean);
 
   return (
-    <article onClick={onActivate} style={{ background: C.white, border: `1px solid ${active ? C.green : C.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: active ? `0 0 0 3px rgba(0,179,104,0.2), 0 8px 24px rgba(10,26,51,0.08)` : '0 8px 24px rgba(10,26,51,0.05)', marginBottom: 18, transition: 'box-shadow .2s, border-color .2s', opacity: full ? 0.85 : 1, cursor: 'pointer' }}>
+    <article id={`venue-${v.id}`} onClick={onActivate} style={{ background: C.white, border: `1px solid ${active ? C.green : C.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: active ? `0 0 0 3px rgba(0,179,104,0.2), 0 8px 24px rgba(10,26,51,0.08)` : '0 8px 24px rgba(10,26,51,0.05)', marginBottom: 18, transition: 'box-shadow .2s, border-color .2s', opacity: full ? 0.85 : 1, cursor: 'pointer' }}>
       {/* Cover */}
       <div style={{ position: 'relative', height: 188, background: venueStripeGradient(v.hue), filter: full ? 'grayscale(1)' : undefined }}>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -316,7 +319,7 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 25, letterSpacing: 0.4, textTransform: 'uppercase', margin: 0, lineHeight: 1, color: C.navy }}>{v.name}</h3>
         </div>
         <div style={{ fontSize: 13, color: C.textSub, marginTop: 7 }}>
-          {v.type}{v.area ? ` · ${v.area}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
+          {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
         </div>
 
         {/* Availability */}
@@ -565,7 +568,17 @@ export default function Page() {
 
   const pins: VenuePin[] = displayList
     .filter(v => v.lat && v.lng)
-    .map(v => ({ id: v.id, name: v.name, space: v.space, kickoff: v.primaryFixture?.kickoff ?? '', coords: [v.lat, v.lng], active: activeVenue === v.id }));
+    .map(v => ({ id: v.id, name: v.name, type: v.type, priceLevel: v.priceLevel, space: v.space, kickoff: v.primaryFixture?.kickoff ?? '', coords: [v.lat, v.lng], active: activeVenue === v.id }));
+
+  const handlePinClick = useCallback((id: string) => {
+    setActiveVenue(cur => cur === id ? null : id);
+    const el = document.getElementById(`venue-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('wtw-highlight');
+      setTimeout(() => el.classList.remove('wtw-highlight'), 650);
+    }
+  }, []);
 
   const filterCount = Object.values(filters).filter(Boolean).length + (spaceOnly ? 1 : 0);
 
@@ -820,7 +833,7 @@ export default function Page() {
           </div>
           {/* Map */}
           <div style={narrow ? { width: '100%', height: 380 } : { width: '40%', maxWidth: 520, position: 'sticky', top: 88, height: 'calc(100vh - 110px)' }}>
-            <MapView pins={pins} onPinClick={id => setActiveVenue(cur => cur === id ? null : id)} />
+            <MapView pins={pins} onPinClick={handlePinClick} />
           </div>
         </div>
       </section>

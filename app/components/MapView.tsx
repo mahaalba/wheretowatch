@@ -6,6 +6,8 @@ import type { Map as LMap, LayerGroup } from 'leaflet';
 export interface VenuePin {
   id: string;
   name: string;
+  type: string;
+  priceLevel: string;
   space: 'now' | 'filling' | 'full';
   kickoff: string;
   coords: [number, number];
@@ -81,7 +83,9 @@ export default function MapView({ pins, onPinClick }: Props) {
           html: `<div style="width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg) scale(${scale});background:${color};border:2.5px solid #fff;${ring}transition:transform .15s"></div>`,
         });
         const mk = L.marker(p.coords, { icon }).addTo(layerRef.current!);
-        mk.bindPopup(`<strong>${p.name}</strong><br>${SPACE_LABEL[p.space]} · ${p.kickoff}`);
+        const typeLabel = p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '';
+        const meta = [typeLabel, p.priceLevel].filter(Boolean).join(' · ');
+        mk.bindPopup(`<strong>${p.name}</strong>${meta ? `<br>${meta}` : ''}`);
         mk.on('click', () => onPinClick(p.id));
         pts.push(p.coords);
       });
