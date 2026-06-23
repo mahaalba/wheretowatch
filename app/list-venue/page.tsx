@@ -62,7 +62,7 @@ const TEAM_SPORTS = ['Football', 'Rugby Union', 'Rugby League', 'Cricket'];
 const WORLD_CUP_FIXTURES = ['All remaining fixtures', 'England v Croatia', 'England v Ghana', 'France v Senegal', 'Argentina v Algeria', 'Brazil games', 'Scotland games', 'The knockouts', 'The Final'];
 
 const BOOK_METHODS = ['Walk-ins only', 'By phone', 'Website', 'Email', 'Other'];
-const TICKETING = ['No, free entry', 'Sometimes — big fixtures only', 'Yes, regularly'];
+const TICKETING = ['No, free entry', 'Sometimes, big fixtures only', 'Yes, regularly'];
 
 const DIAL_CODES = [
   { country: 'United Kingdom', code: '+44', flag: '🇬🇧' },
@@ -346,7 +346,7 @@ export default function ListVenuePage() {
 
   // ── Summary data ─────────────────────────────────────────────────────────────
   const featureTags = [...SETUP_TAGS.filter(t => setupTags[t]), ...customTags];
-  if (!featureTags.length) featureTags.push('—');
+  if (!featureTags.length) featureTags.push('Not set');
 
   const showingLines = [
     ...SPORTS_LIST.filter(sp => sports[sp] && sp !== 'Other').map(sp => {
@@ -358,17 +358,17 @@ export default function ListVenuePage() {
     }),
     ...customSports,
   ];
-  if (!showingLines.length) showingLines.push('—');
+  if (!showingLines.length) showingLines.push('Not set');
 
-  const bookingVal = bookMethod === 'Other' ? (bookOther.trim() || 'Other') : (bookMethod || '—');
+  const bookingVal = bookMethod === 'Other' ? (bookOther.trim() || 'Other') : (bookMethod || 'Not set');
 
   const summaryTop = [
-    { label: 'Venue', value: dName || '—' },
-    { label: 'Area', value: dArea || '—' },
-    { label: 'Address', value: dAddress || '—' },
-    { label: 'Type', value: venueType || '—' },
-    { label: 'Phone', value: dPhone || '—' },
-    { label: 'Website', value: dWebsite || '—' },
+    { label: 'Venue', value: dName || 'Not set' },
+    { label: 'Area', value: dArea || 'Not set' },
+    { label: 'Address', value: dAddress || 'Not set' },
+    { label: 'Type', value: venueType || 'Not set' },
+    { label: 'Phone', value: dPhone || 'Not set' },
+    { label: 'Website', value: dWebsite || 'Not set' },
     ...(showFoodUntil && foodUntil ? [{ label: 'Food until', value: foodUntil }] : []),
     ...(showDrinksUntil && drinksUntil ? [{ label: 'Drinks until', value: drinksUntil }] : []),
   ];
@@ -376,7 +376,7 @@ export default function ListVenuePage() {
   const summaryBottom = [
     ...(showCrowd && crowdTeam.trim() ? [{ label: 'Crowd backs', value: crowdTeam }] : []),
     { label: 'Bookings', value: bookingVal },
-    { label: 'Ticketed', value: ticketing || '—' },
+    { label: 'Ticketed', value: ticketing || 'Not set' },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -588,7 +588,7 @@ export default function ListVenuePage() {
         {step === 3 && (
           <div>
             <h2 style={{ fontFamily: FB, fontWeight: 700, fontSize: 26, margin: 0, letterSpacing: '-0.01em' }}>About you</h2>
-            <p style={{ fontSize: 15, color: C.textMuted, margin: '8px 0 0' }}>This isn&apos;t shown publicly — it&apos;s just so we can reach you.</p>
+            <p style={{ fontSize: 15, color: C.textMuted, margin: '8px 0 0' }}>This isn&apos;t shown publicly. We&apos;ll only use it to contact you.</p>
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180 }}>
@@ -689,7 +689,7 @@ export default function ListVenuePage() {
 
             {sports['Other'] && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <input className="wtw-input" value={customSportInput} onChange={e => setCustomSportInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustomSport()} placeholder="Add a sport — e.g. Basketball, Darts" style={{ ...inputStyle, flex: 1, padding: '12px 14px' }} />
+                <input className="wtw-input" value={customSportInput} onChange={e => setCustomSportInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustomSport()} placeholder="Add a sport, e.g. Basketball, Darts" style={{ ...inputStyle, flex: 1, padding: '12px 14px' }} />
                 <button onClick={addCustomSport} style={{ background: C.navy, color: C.white, border: 'none', borderRadius: 12, padding: '0 18px', fontFamily: FB, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Add</button>
               </div>
             )}

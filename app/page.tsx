@@ -110,11 +110,13 @@ interface Venue {
   bookingMethod: string; capacity: number; setupTags: string[];
   isFeatured: boolean; verified: boolean; listingScope: string; claimed: boolean;
   hue: number; space: Space;
+  gamesPolicy: string; bookable: string; bookingUrl?: string;
   primaryFixture: FixtureLink | null; allFixtures: FixtureLink[];
 }
 
 interface RawVenueFixture {
   confirmed: boolean;
+  games_policy?: string;
   fixtures: { id: string; home_team: string; away_team: string; kickoff_at: string } | null;
 }
 
@@ -124,6 +126,7 @@ interface RawDbVenue {
   phone?: string; email?: string; website?: string; booking_method?: string;
   capacity?: number; setup_tags?: string[];
   is_featured?: boolean; verified?: boolean; listing_scope?: string; claimed?: boolean;
+  bookable?: string; booking_url?: string;
   venue_fixtures?: RawVenueFixture[];
 }
 
@@ -157,6 +160,9 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
     isFeatured: raw.is_featured ?? false, verified: raw.verified ?? false,
     listingScope: raw.listing_scope ?? 'permanent', claimed: raw.claimed ?? false,
     hue: venueHue(raw.type ?? ''), space: 'now',
+    gamesPolicy: vfLinks[0]?.games_policy ?? 'unknown',
+    bookable: raw.bookable ?? 'unknown',
+    bookingUrl: raw.booking_url ?? undefined,
     primaryFixture, allFixtures,
   };
 }
@@ -235,7 +241,7 @@ function WatchAtHomeCard({ fixture, kickoff, onBrowse }: WatchAtHomeProps) {
           Kicks off {kickoff} UK time
         </div>
         <p style={{ fontSize: 14, color: C.textBlue, lineHeight: 1.65, margin: '0 0 22px' }}>
-          Most venues are closed this late — this one&apos;s best enjoyed from the sofa. Snacks optional, staying up mandatory.
+          Most venues are closed this late. This one&apos;s best enjoyed from the sofa. Snacks optional, staying up mandatory.
         </p>
         <button onClick={onBrowse} style={{ width: '100%', background: 'rgba(255,255,255,0.09)', color: C.white, border: '1px solid rgba(255,255,255,0.18)', borderRadius: 12, padding: '12px 20px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.2 }}>
           Browse earlier games instead
@@ -319,34 +325,45 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.2 }}>{m.label}</span>
         </div>
 
-        {/* Showing — primary fixture */}
-        {v.primaryFixture ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10, background: v.primaryFixture.confirmed ? C.bg : '#FFFBF0', borderRadius: 12, padding: '10px 13px', border: v.primaryFixture.confirmed ? 'none' : `1px solid rgba(255,178,46,0.3)` }}>
-            <span className={v.primaryFixture.confirmed ? 'wtw-pulse-slow' : ''} style={{ width: 8, height: 8, borderRadius: 999, background: v.primaryFixture.confirmed ? C.green : C.amber, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: v.primaryFixture.confirmed ? C.greenDark : '#8A5A00', textTransform: 'uppercase', letterSpacing: 0.4, flexShrink: 0 }}>
-              {v.primaryFixture.confirmed ? 'Showing' : 'Unconfirmed'}
-            </span>
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, textAlign: 'right' }}>
-              {v.primaryFixture.homeFlag} {v.primaryFixture.home} v {v.primaryFixture.away} {v.primaryFixture.awayFlag}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 600, color: C.navy, flexShrink: 0 }}>{v.primaryFixture.kickoff}</span>
+        {/* Fixture display — controlled by games_policy */}
+        {v.gamesPolicy === 'all_games' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10, background: C.bg, borderRadius: 12, padding: '10px 13px' }}>
+            <span className="wtw-pulse-slow" style={{ width: 8, height: 8, borderRadius: 999, background: C.green, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.greenDark }}>Showing all World Cup fixtures</span>
+          </div>
+        ) : v.gamesPolicy === 'unknown' ? (
+          <div style={{ marginTop: 10, background: '#FFFBF0', borderRadius: 12, padding: '10px 13px', fontSize: 13, color: '#8A5A00', border: `1px solid rgba(255,178,46,0.3)` }}>
+            Contact venue to confirm which games they&apos;re showing
           </div>
         ) : (
-          <div style={{ marginTop: 10, background: C.bg, borderRadius: 12, padding: '10px 13px', fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>
-            No fixtures linked yet
-          </div>
+          <>
+            {v.primaryFixture ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10, background: v.primaryFixture.confirmed ? C.bg : '#FFFBF0', borderRadius: 12, padding: '10px 13px', border: v.primaryFixture.confirmed ? 'none' : `1px solid rgba(255,178,46,0.3)` }}>
+                <span className={v.primaryFixture.confirmed ? 'wtw-pulse-slow' : ''} style={{ width: 8, height: 8, borderRadius: 999, background: v.primaryFixture.confirmed ? C.green : C.amber, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: v.primaryFixture.confirmed ? C.greenDark : '#8A5A00', textTransform: 'uppercase', letterSpacing: 0.4, flexShrink: 0 }}>
+                  {v.primaryFixture.confirmed ? 'Showing' : 'Unconfirmed'}
+                </span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, textAlign: 'right' }}>
+                  {v.primaryFixture.homeFlag} {v.primaryFixture.home} v {v.primaryFixture.away} {v.primaryFixture.awayFlag}
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 600, color: C.navy, flexShrink: 0 }}>{v.primaryFixture.kickoff}</span>
+              </div>
+            ) : (
+              <div style={{ marginTop: 10, background: C.bg, borderRadius: 12, padding: '10px 13px', fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>
+                No fixtures linked yet
+              </div>
+            )}
+            {v.allFixtures.length > 1 && v.allFixtures.slice(1, 3).map(fx => (
+              <div key={fx.id} style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6, background: C.bg, borderRadius: 10, padding: '8px 13px' }}>
+                <span style={{ width: 7, height: 7, borderRadius: 999, background: fx.confirmed ? C.green : C.amber, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.textSub, flex: 1 }}>
+                  {fx.homeFlag} {fx.home} v {fx.away} {fx.awayFlag}
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.textSub }}>{fx.kickoff}</span>
+              </div>
+            ))}
+          </>
         )}
-
-        {/* Additional fixtures */}
-        {v.allFixtures.length > 1 && v.allFixtures.slice(1, 3).map(fx => (
-          <div key={fx.id} style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6, background: C.bg, borderRadius: 10, padding: '8px 13px' }}>
-            <span style={{ width: 7, height: 7, borderRadius: 999, background: fx.confirmed ? C.green : C.amber, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.textSub, flex: 1 }}>
-              {fx.homeFlag} {fx.home} v {fx.away} {fx.awayFlag}
-            </span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: C.textSub }}>{fx.kickoff}</span>
-          </div>
-        ))}
 
         {/* Setup tags */}
         {tags.length > 0 && (
@@ -365,6 +382,18 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
               Claim your listing →
             </Link>
           </div>
+        )}
+
+        {/* Book your spot CTA */}
+        {(v.bookable === 'yes' || v.bookingUrl) && (
+          <a
+            href={v.bookingUrl ?? v.website ?? '#'}
+            target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 13, background: C.green, color: C.white, borderRadius: 12, padding: '12px 16px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, letterSpacing: 0.2 }}
+          >
+            Book your spot
+          </a>
         )}
 
         {/* Actions */}
@@ -389,9 +418,9 @@ function BookingModal({ venue: v, onClose }: BookingModalProps) {
   const fx = v.primaryFixture;
   const methodTitle = { website: 'Book online', phone: 'Call to reserve', walkins: 'Walk-ins only', email: 'Email to book' }[v.bookingMethod] ?? 'Book';
   const methodDesc: Record<string, string> = {
-    website: `Head to ${v.website ?? 'their website'} to grab a table — takes 2 minutes and you'll get a confirmation.`,
+    website: `Head to ${v.website ?? 'their website'} to grab a table. Takes 2 minutes and you'll get a confirmation.`,
     phone:   `Call ${v.phone ?? 'the venue'} to check availability and reserve. Lines open from midday until kickoff.`,
-    walkins: "This venue doesn't take advance bookings — just show up early to bag the best spot.",
+    walkins: "This venue doesn't take advance bookings. Just show up early to bag the best spot.",
     email:   `Email ${v.email ?? 'the venue'} with your name, party size and the match you're coming for.`,
   };
   return (
@@ -412,7 +441,7 @@ function BookingModal({ venue: v, onClose }: BookingModalProps) {
         <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: '18px 0 7px' }}>{methodTitle}</div>
         <p style={{ fontSize: 13, color: C.textSub, margin: '0 0 13px', lineHeight: 1.45 }}>{methodDesc[v.bookingMethod] ?? ''}</p>
         <button style={{ width: '100%', background: full ? C.navy : C.green, color: C.white, border: 'none', borderRadius: 13, padding: 14, fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-          {full ? 'Join the waitlist' : v.bookingMethod === 'walkins' ? "Got it — I'll walk in" : methodTitle}
+          {full ? 'Join the waitlist' : v.bookingMethod === 'walkins' ? "Got it, I'll walk in" : methodTitle}
         </button>
       </div>
     </div>
@@ -451,7 +480,7 @@ export default function Page() {
       const [venueRes, fixtureRes] = await Promise.all([
         supabase
           .from('venues')
-          .select('*, venue_fixtures(confirmed, fixtures(id, home_team, away_team, kickoff_at, status))')
+          .select('*, venue_fixtures(confirmed, games_policy, fixtures(id, home_team, away_team, kickoff_at, status))')
           .eq('status', 'active')
           .or(`active_until.is.null,active_until.gte.${now}`)
           .order('is_featured', { ascending: false }),
@@ -719,7 +748,7 @@ export default function Page() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.navy, color: C.white, borderRadius: 12, padding: '9px 14px' }}>
             <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 600 }}>Showing</span>
-            <select value={activeMatch} onChange={e => setActiveMatch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.amber, cursor: 'pointer' }}>
+            <select value={activeMatch} onChange={e => setActiveMatch(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.amber, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
               {matchOptions.map(o => <option key={o.value} value={o.value} style={{ color: C.navy }}>{o.label}</option>)}
             </select>
           </div>
@@ -735,9 +764,9 @@ export default function Page() {
             <span className={spaceOnly ? 'wtw-pulse-slow' : ''} style={{ width: 8, height: 8, borderRadius: 999, background: spaceOnly ? C.green : C.textMuted, flexShrink: 0 }} />
             Space now
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.white, border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: '8px 13px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 13px' }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sort</span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer' }}>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ border: 'none', outline: 'none', background: 'transparent', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
@@ -747,7 +776,7 @@ export default function Page() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: C.textMuted, lineHeight: 1.4 }}>
           <ClockIcon />
-          <span>Availability is set live by each venue — updated before kickoff and as tables fill. <strong style={{ color: C.greenDark, fontWeight: 700 }}>Space now</strong> means tables free right now.</span>
+          <span>Availability is set live by each venue, updated before kickoff and as tables fill. <strong style={{ color: C.greenDark, fontWeight: 700 }}>Space now</strong> means tables free right now.</span>
         </div>
       </section>
 
