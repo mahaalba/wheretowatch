@@ -26,7 +26,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || user.email !== process.env.ADMIN_EMAIL) {
+  if (!user) {
+    const loginUrl = new URL('/claim', request.url);
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (user.email !== process.env.ADMIN_EMAIL) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

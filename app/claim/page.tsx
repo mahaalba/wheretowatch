@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -250,7 +250,9 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
 // ─── Page shell ───────────────────────────────────────────────────────────────
 function ClaimPageContent() {
   const params = useSearchParams();
+  const router = useRouter();
   const venueId = params.get('venue');
+  const redirectAfterAuth = params.get('redirect');
 
   const [venueName, setVenueName] = useState('');
   const [authState, setAuthState] = useState<'loading' | 'unauthenticated' | 'authenticated'>('loading');
@@ -267,15 +269,22 @@ function ClaimPageContent() {
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       setAuthState(s ? 'authenticated' : 'unauthenticated');
+      if (s && redirectAfterAuth && redirectAfterAuth.startsWith('/')) {
+        router.push(redirectAfterAuth);
+        return;
+      }
     }
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
       setSession(s);
       setAuthState(s ? 'authenticated' : 'unauthenticated');
+      if (s && redirectAfterAuth && redirectAfterAuth.startsWith('/')) {
+        router.push(redirectAfterAuth);
+      }
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router, redirectAfterAuth]);
 
   // Fetch venue name
   useEffect(() => {
