@@ -73,6 +73,7 @@ export const TEAM_FLAGS: Record<string, string> = {
   'Kosovo':           '🇽🇰',
   'Greece':           '🇬🇷',
   'Turkey':           '🇹🇷',
+  'Türkiye':          '🇹🇷',
   'Cyprus':           '🇨🇾',
   'Israel':           '🇮🇱',
 
