@@ -159,14 +159,12 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
     e.preventDefault();
     setSubmitting(true);
     setError('');
-    const { error: err } = await supabase.from('venue_submissions').insert({
+    const { error: err } = await supabase.from('venue_claims').insert({
       venue_id: venueId ?? null,
       venue_name: venueName || null,
-      contact_email: userEmail,
-      contact_role: role || null,
-      note: note.trim() || null,
-      type: 'claim',
-      auth_user_id: session.user?.id ?? null,
+      user_id: session.user?.id ?? null,
+      email: userEmail,
+      details: { role, note: note.trim() || null },
     });
     setSubmitting(false);
     if (err) setError('Something went wrong. Please try again or email hello@wherewewatch.co.uk');
