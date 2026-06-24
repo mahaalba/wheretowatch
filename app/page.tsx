@@ -107,7 +107,7 @@ interface Venue {
   id: string; name: string; type: string; area: string;
   lat: number; lng: number;
   phone?: string; email?: string; website?: string;
-  bookingMethod: string; capacity: number; setupTags: string[];
+  bookingMethod: string; capacity: number; setupTags: string[]; autoTags: string[];
   isFeatured: boolean; verified: boolean; listingScope: string; claimed: boolean;
   hue: number; space: Space; priceLevel: string; photos: string[];
   gamesPolicy: string; bookable: string; bookingUrl?: string;
@@ -126,7 +126,7 @@ interface RawDbVenue {
   phone?: string; email?: string; website?: string; booking_method?: string;
   capacity?: number; setup_tags?: string[]; price_level?: string;
   is_featured?: boolean; verified?: boolean; listing_scope?: string; claimed?: boolean;
-  bookable?: string; booking_url?: string; photo_url?: string;
+  bookable?: string; booking_url?: string; photo_url?: string; auto_tags?: string[] | null;
   venue_photos?: Array<{ photo_url: string; display_order: number }>;
   venue_fixtures?: RawVenueFixture[];
 }
@@ -157,7 +157,7 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
     lat: raw.lat ?? 0, lng: raw.lng ?? 0,
     phone: raw.phone ?? undefined, email: raw.email ?? undefined, website: raw.website ?? undefined,
     bookingMethod: raw.booking_method ?? 'walkins',
-    capacity: raw.capacity ?? 0, setupTags: raw.setup_tags ?? [],
+    capacity: raw.capacity ?? 0, setupTags: raw.setup_tags ?? [], autoTags: raw.auto_tags ?? [],
     isFeatured: raw.is_featured ?? false, verified: raw.verified ?? false,
     listingScope: raw.listing_scope ?? 'permanent', claimed: raw.claimed ?? false,
     hue: venueHue(raw.type ?? ''), space: 'now',
@@ -175,6 +175,28 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
   };
 }
 
+// ─── Filter logic ─────────────────────────────────────────────────────────────
+const PRICE_MAP: Record<string, string> = { p1: '£', p2: '££', p3: '£££' };
+
+function matchesFilters(v: Venue, f: Record<string, boolean>): boolean {
+  const activePriceKeys = ['p1', 'p2', 'p3'].filter(k => f[k]);
+  if (activePriceKeys.length > 0 && !activePriceKeys.some(k => v.priceLevel === PRICE_MAP[k])) {
+    return false;
+  }
+  const otherKeys = Object.keys(f).filter(k => f[k] && !['space', 'p1', 'p2', 'p3'].includes(k));
+  return otherKeys.every(k => {
+    switch (k) {
+      case 'great_food': return v.autoTags.includes('great_food');
+      case 'chilled':    return v.autoTags.includes('chilled');
+      case 'lively':     return v.autoTags.includes('lively');
+      case 'outdoor':    return v.autoTags.includes('outdoor_confirmed') || v.setupTags.includes('outdoor');
+      case 'late':       return v.autoTags.includes('late_friendly');
+      case 'book':       return v.bookable === 'yes' || !!v.bookingUrl;
+      default:           return v.setupTags.includes(k);
+    }
+  });
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 const SORT_OPTIONS = [
   { value: 'recommended', label: 'Recommended' },
@@ -183,15 +205,17 @@ const SORT_OPTIONS = [
 ];
 
 const FILTER_GROUPS = [
-  { title: 'Screens & space', keys: ['bigscreen', 'outdoor'] },
-  { title: 'Good for',        keys: ['kitchen', 'walkins'] },
+  { title: 'Vibe',            keys: ['chilled', 'lively', 'great_food'] },
+  { title: 'Screens & space', keys: ['outdoor'] },
   { title: 'Booking & hours', keys: ['book', 'late'] },
+  { title: 'Price',           keys: ['p1', 'p2', 'p3'] },
 ];
 
 const FILTER_LABELS: Record<string, string> = {
-  bigscreen: 'Big screen', outdoor: 'Outdoor screen',
-  kitchen: 'Full kitchen', walkins: 'Walk-ins',
+  chilled: 'Chilled', lively: 'Lively', great_food: 'Great food',
+  outdoor: 'Outdoor screen',
   book: 'Book a table', late: 'Open late',
+  p1: '£', p2: '££', p3: '£££',
 };
 
 const TAG_LABELS: Record<string, string> = {
@@ -200,10 +224,15 @@ const TAG_LABELS: Record<string, string> = {
 };
 
 const MOBILE_FILTERS = [
-  { key: 'outdoor', label: 'Outdoor' },
-  { key: 'walkins', label: 'Chilled' },
-  { key: 'late',    label: 'Late night' },
-  { key: 'book',    label: 'Bookable' },
+  { key: 'outdoor',    label: 'Outdoor' },
+  { key: 'chilled',    label: 'Chilled' },
+  { key: 'lively',     label: 'Lively' },
+  { key: 'great_food', label: 'Great food' },
+  { key: 'late',       label: 'Late night' },
+  { key: 'book',       label: 'Bookable' },
+  { key: 'p1',         label: '£' },
+  { key: 'p2',         label: '££' },
+  { key: 'p3',         label: '£££' },
 ];
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -326,7 +355,7 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 25, letterSpacing: 0.4, textTransform: 'uppercase', margin: 0, lineHeight: 1, color: C.navy }}>{v.name}</h3>
         </div>
         <div style={{ fontSize: 13, color: C.textSub, marginTop: 7 }}>
-          {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
+          {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.priceLevel ? ` · ${v.priceLevel}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
         </div>
 
         {/* Availability — hidden until venues can update live */}
@@ -566,14 +595,13 @@ export default function Page() {
   }, [dbFixtures]);
 
   // ── Filter + sort ──
-  const activeFilterKeys = Object.keys(filters).filter(k => filters[k] && k !== 'space');
   const loc = locQuery.trim().toLowerCase();
 
   let list = venues.filter(v =>
     (activeMatch === 'all' || v.allFixtures.some(f => f.id === activeMatch)) &&
     (!loc || v.area.toLowerCase().includes(loc) || v.name.toLowerCase().includes(loc)) &&
     (!spaceOnly && !filters.space || v.space === 'now') &&
-    activeFilterKeys.every(k => v.setupTags.includes(k)),
+    matchesFilters(v, filters),
   );
 
   if (sortBy === 'space') list = [...list].sort((a, b) => SPACE_META[a.space].rank - SPACE_META[b.space].rank);
@@ -616,8 +644,7 @@ export default function Page() {
 
   const bookingVenue = bookingId ? venues.find(v => v.id === bookingId) ?? null : null;
 
-  const draftActiveKeys = Object.keys(draftFilters).filter(k => draftFilters[k] && k !== 'space');
-  const draftCount = venues.filter(v => draftActiveKeys.every(k => v.setupTags.includes(k))).length;
+  const draftCount = venues.filter(v => matchesFilters(v, draftFilters)).length;
 
   const venueListContent = loading ? (
     <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>

@@ -74,6 +74,7 @@ function toDbRow(r: Record<string, string>): Record<string, unknown> {
   if (r.price_level)   row.price_level = r.price_level;
   if (r.bookable)      row.bookable = r.bookable;
   if (r.booking_url)   row.booking_url = r.booking_url;
+  if (r.auto_tags)     row.auto_tags = r.auto_tags.split(',').map((s: string) => s.trim()).filter(Boolean);
 
   const lat = parseFloat(r.lat), lng = parseFloat(r.lng);
   if (!isNaN(lat)) row.lat = lat;
