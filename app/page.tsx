@@ -24,6 +24,32 @@ const FONT_BODY = "'Inter', system-ui, sans-serif";
 
 const capitalise = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
+// ─── Tournament stage (update dates here if schedule changes) ─────────────────
+// NOTE: web sources show R32 Jun 29–Jul 6, R16 Jul 9–12 — verify against live schedule
+const STAGES = [
+  { label: 'GROUP STAGE',    start: [2026,  6, 11], end: [2026,  6, 27], display: '11–27 JUN' },
+  { label: 'ROUND OF 32',    start: [2026,  6, 28], end: [2026,  7,  3], display: '28 JUN–3 JUL' },
+  { label: 'ROUND OF 16',    start: [2026,  7,  4], end: [2026,  7,  7], display: '4–7 JUL' },
+  { label: 'QUARTER-FINALS', start: [2026,  7,  9], end: [2026,  7, 11], display: '9–11 JUL' },
+  { label: 'SEMI-FINALS',    start: [2026,  7, 14], end: [2026,  7, 15], display: '14–15 JUL' },
+  { label: 'FINAL',          start: [2026,  7, 19], end: [2026,  7, 19], display: '19 JUL' },
+] as const;
+
+function getTournamentStage() {
+  const n = new Date();
+  const today = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  for (const s of STAGES) {
+    const start = new Date(s.start[0], s.start[1] - 1, s.start[2]);
+    const end   = new Date(s.end[0],   s.end[1]   - 1, s.end[2]);
+    if (today >= start && today <= end) return { ...s, isLive: true };
+  }
+  // Between stages — show next upcoming round
+  for (const s of STAGES) {
+    const start = new Date(s.start[0], s.start[1] - 1, s.start[2]);
+    if (today < start) return { ...s, isLive: false };
+  }
+  return null;
+}
 
 // ─── Kickoff helpers ──────────────────────────────────────────────────────────
 function kickoffInfo(isoStr: string): { display: string; koRank: number; late: boolean } {
@@ -604,10 +630,12 @@ export default function Page() {
         <div style={{ position: 'absolute', top: -150, right: -90, width: 440, height: 440, borderRadius: 999, background: 'radial-gradient(circle, rgba(255,178,46,0.20), transparent 70%)', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', maxWidth: 1400, margin: '0 auto', padding: '40px 24px 28px', color: C.white }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600, letterSpacing: 1.2, textTransform: 'uppercase', color: C.amber }}>
-            <span className="wtw-pulse" style={{ width: 9, height: 9, borderRadius: 999, background: C.red, boxShadow: '0 0 0 4px rgba(229,72,77,0.22)' }} />
-            World Cup · group stage live · 11 Jun – 19 Jul
-          </div>
+          {(stg => stg && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600, letterSpacing: 1.2, textTransform: 'uppercase', color: C.amber }}>
+              {stg.isLive && <span className="wtw-pulse" style={{ width: 9, height: 9, borderRadius: 999, background: C.red, boxShadow: '0 0 0 4px rgba(229,72,77,0.22)' }} />}
+              WORLD CUP · {stg.label}{stg.isLive ? ' LIVE' : ''} · {stg.display}
+            </div>
+          ))(getTournamentStage())}
           <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(36px, 5.2vw, 62px)', lineHeight: 1.02, letterSpacing: 0.3, textTransform: 'uppercase', margin: '16px 0 0', maxWidth: '20ch' }}>
             Where we watch the <span style={{ color: C.green }}>World Cup</span>
           </h1>

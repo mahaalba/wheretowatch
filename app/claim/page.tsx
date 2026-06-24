@@ -16,40 +16,27 @@ const FONT_DISPLAY = "'Anton', sans-serif";
 const FONT_BODY    = "'DM Sans', sans-serif";
 const FONT_MONO    = "'IBM Plex Mono', monospace";
 
-const BENEFITS = [
-  { icon: '✓', text: 'Confirm exactly which World Cup fixtures you are showing' },
-  { icon: '✓', text: 'Update your opening times, outdoor setup, and late-night hours' },
-  { icon: '✓', text: 'Get the Verified badge and priority placement in search results' },
-];
-
 // ─── Auth section (no session) ────────────────────────────────────────────────
 function AuthSection({ venueName }: { venueName: string }) {
   const [email, setEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
 
   const redirectTo = typeof window !== 'undefined'
     ? `${window.location.origin}/claim${window.location.search}`
     : '';
 
-  async function signInGoogle() {
-    setAuthError('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    });
-    if (error) setAuthError(error.message);
-  }
-
-  async function signInApple() {
-    setAuthError('');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: { redirectTo },
-    });
-    if (error) setAuthError(error.message);
-  }
+  // Google and Apple OAuth — re-enable once providers are configured in Supabase Auth → Providers
+  // async function signInGoogle() {
+  //   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+  //   if (error) setAuthError(error.message);
+  // }
+  // async function signInApple() {
+  //   const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo } });
+  //   if (error) setAuthError(error.message);
+  // }
 
   async function sendMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +60,7 @@ function AuthSection({ venueName }: { venueName: string }) {
           Check your inbox
         </h2>
         <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.55, margin: '0 0 24px' }}>
-          We sent a sign-in link to <strong>{email}</strong>. Click it to continue claiming {venueName || 'your venue'}.
+          We sent a sign-in link to <strong>{email}</strong>. Click it to continue{venueName ? ` claiming ${venueName}` : ''}.
         </p>
         <button
           onClick={() => setEmailSent(false)}
@@ -87,37 +74,6 @@ function AuthSection({ venueName }: { venueName: string }) {
 
   return (
     <div style={{ background: C.white, borderRadius: 20, padding: '28px', boxShadow: '0 8px 40px rgba(10,26,51,0.08)' }}>
-      <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.greenDark, marginBottom: 6 }}>
-        Sign in to continue
-      </div>
-      <div style={{ fontSize: 14, color: C.textSub, marginBottom: 22 }}>
-        Takes under a minute. No password needed.
-      </div>
-
-      {/* OAuth buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-        <button
-          onClick={signInGoogle}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', background: C.white, color: C.navy, border: `1.5px solid ${C.borderMed}`, borderRadius: 12, padding: '13px 16px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-        >
-          <span style={{ fontSize: 18 }}>G</span> Continue with Google
-        </button>
-        <button
-          onClick={signInApple}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', background: C.navy, color: C.white, border: 'none', borderRadius: 12, padding: '13px 16px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
-        >
-          <span style={{ fontSize: 18 }}></span> Continue with Apple
-        </button>
-      </div>
-
-      {/* Divider */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ flex: 1, height: 1, background: C.border }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted }}>or use email</span>
-        <div style={{ flex: 1, height: 1, background: C.border }} />
-      </div>
-
-      {/* Email magic link */}
       <form onSubmit={sendMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <input
           type="email" required value={email} onChange={e => setEmail(e.target.value)}
@@ -138,9 +94,25 @@ function AuthSection({ venueName }: { venueName: string }) {
         </div>
       )}
 
-      <p style={{ fontSize: 11, color: C.textMuted, marginTop: 16, lineHeight: 1.5 }}>
-        By signing in you agree to our terms. We use your identity to verify venue ownership only.
-      </p>
+      <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <p style={{ fontSize: 11, color: C.textMuted, margin: 0, lineHeight: 1.6 }}>
+          By signing up you agree to our{' '}
+          <Link href="/privacy" style={{ color: C.greenDark, textDecoration: 'underline' }}>privacy policy</Link>
+          {' '}and{' '}
+          <Link href="/terms" style={{ color: C.greenDark, textDecoration: 'underline' }}>terms and conditions</Link>.
+        </p>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={marketingConsent}
+            onChange={e => setMarketingConsent(e.target.checked)}
+            style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.6 }}>
+            I&apos;d like to receive email updates about growing my venue&apos;s reach.
+          </span>
+        </label>
+      </div>
     </div>
   );
 }
@@ -298,37 +270,27 @@ function ClaimPageContent() {
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '48px 20px 80px' }}>
-
-      {/* Hero */}
-      <div style={{ textAlign: 'center', marginBottom: 36 }}>
-        <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.greenDark, marginBottom: 10 }}>
-          Venue owners
-        </div>
-        <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(32px,6vw,44px)', textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: '0 0 14px', lineHeight: 1.05 }}>
-          Claim your listing{venueName ? ` for ${venueName}` : ''}
-        </h1>
-        <p style={{ fontSize: 15, color: C.textSub, lineHeight: 1.6, maxWidth: '42ch', margin: '0 auto 28px' }}>
-          Takes under a minute. No recurring fee.
-        </p>
-
-        {/* Benefits */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left', marginBottom: 32 }}>
-          {BENEFITS.map((b, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: C.white, borderRadius: 12, padding: '13px 16px', boxShadow: '0 2px 12px rgba(10,26,51,0.06)' }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.green, flexShrink: 0 }}>{b.icon}</span>
-              <span style={{ fontSize: 13, color: C.textSub, lineHeight: 1.4 }}>{b.text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Auth / verify state */}
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: C.textMuted, fontSize: 14 }}>Loading…</div>
       ) : authState === 'authenticated' && session ? (
-        <VerifyForm session={session} venueId={venueId} venueName={venueName} />
+        <>
+          <div style={{ textAlign: 'center', marginBottom: 36 }}>
+            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(32px,6vw,44px)', textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: 0, lineHeight: 1.05 }}>
+              Claim your listing{venueName ? ` for ${venueName}` : ''}
+            </h1>
+          </div>
+          <VerifyForm session={session} venueId={venueId} venueName={venueName} />
+        </>
       ) : (
-        <AuthSection venueName={venueName} />
+        <>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(28px,5vw,38px)', textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: '0 0 8px', lineHeight: 1.05 }}>
+              Sign in or create<br />an account
+            </h1>
+            <p style={{ fontSize: 14, color: C.textSub, margin: 0 }}>No password needed.</p>
+          </div>
+          <AuthSection venueName={venueName} />
+        </>
       )}
     </div>
   );
