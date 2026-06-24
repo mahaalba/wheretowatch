@@ -105,6 +105,7 @@ export const TEAM_FLAGS: Record<string, string> = {
   'Cuba':             '🇨🇺',
   'Nicaragua':        '🇳🇮',
   'Curacao':          '🇨🇼',
+  'Curaçao':          '🇨🇼',
   'Belize':           '🇧🇿',
   'Barbados':         '🇧🇧',
   'Bermuda':          '🇧🇲',
