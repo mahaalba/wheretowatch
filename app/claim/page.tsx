@@ -8,7 +8,7 @@ import type { Session } from '@supabase/supabase-js';
 
 const C = {
   navy: '#0A1A33', green: '#00B368', greenDark: '#0A6B45',
-  amber: '#FFB22E', bg: '#F6F7F4', white: '#fff',
+  bg: '#F6F7F4', white: '#fff',
   textMuted: '#9AA3B0', textSub: '#5B6577',
   border: 'rgba(10,26,51,0.08)', borderMed: 'rgba(10,26,51,0.14)',
 };
@@ -16,85 +16,224 @@ const FONT_DISPLAY = "'Anton', sans-serif";
 const FONT_BODY    = "'DM Sans', sans-serif";
 const FONT_MONO    = "'IBM Plex Mono', monospace";
 
-// ─── Auth section (no session) ────────────────────────────────────────────────
-function AuthSection({ venueName }: { venueName: string }) {
-  const [email, setEmail] = useState('');
-  const [emailSent, setEmailSent] = useState(false);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [marketingConsent, setMarketingConsent] = useState(false);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function friendlyError(msg: string): string {
+  if (/invalid login credentials/i.test(msg))      return 'Incorrect email or password.';
+  if (/user already registered|already been registered/i.test(msg))
+    return 'An account with this email already exists. Sign in instead.';
+  if (/password should be at least/i.test(msg))    return 'Password must be at least 8 characters.';
+  if (/email not confirmed/i.test(msg))             return 'Please confirm your email address — check your inbox.';
+  if (/rate limit/i.test(msg))                      return 'Too many attempts. Please wait a moment and try again.';
+  return msg;
+}
 
-  const redirectTo = typeof window !== 'undefined'
-    ? `${window.location.origin}/claim${window.location.search}`
-    : '';
+function ErrorBox({ msg }: { msg: string }) {
+  return (
+    <div style={{ fontSize: 13, color: '#9A2A2A', background: '#FBE3E0', borderRadius: 10, padding: '10px 14px' }}>
+      {msg}
+    </div>
+  );
+}
 
-  // Google and Apple OAuth — re-enable once providers are configured in Supabase Auth → Providers
-  // async function signInGoogle() {
-  //   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-  //   if (error) setAuthError(error.message);
-  // }
-  // async function signInApple() {
-  //   const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo } });
-  //   if (error) setAuthError(error.message);
-  // }
+const INPUT: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box',
+  border: `1.5px solid ${C.borderMed}`, borderRadius: 11,
+  padding: '12px 14px', fontFamily: FONT_BODY, fontSize: 14, color: C.navy, outline: 'none',
+};
 
-  async function sendMagicLink(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setEmailLoading(true);
+function PrimaryBtn({ disabled, loading, label, loadingLabel }: { disabled: boolean; loading: boolean; label: string; loadingLabel: string }) {
+  return (
+    <button
+      type="submit" disabled={disabled || loading}
+      style={{ background: (disabled || loading) ? '#D1D5DB' : C.green, color: (disabled || loading) ? '#9AA3B0' : C.white, border: 'none', borderRadius: 12, padding: '13px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: (disabled || loading) ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
+    >
+      {loading ? loadingLabel : label}
+    </button>
+  );
+}
+
+function Divider() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, height: 1, background: C.border }} />
+      <span style={{ fontSize: 12, fontWeight: 600, color: C.textMuted }}>or</span>
+      <div style={{ flex: 1, height: 1, background: C.border }} />
+    </div>
+  );
+}
+
+function GoogleButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button" onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', background: C.white, color: C.navy, border: `1.5px solid ${C.borderMed}`, borderRadius: 12, padding: '12px 16px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+        <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332Z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+  );
+}
+// Apple OAuth — add later once an Apple Developer account is set up
+
+// ─── Auth section ─────────────────────────────────────────────────────────────
+type AuthMode = 'signin' | 'signup' | 'forgot';
+
+function AuthSection() {
+  const [mode, setMode]                   = useState<AuthMode>('signin');
+  const [email, setEmail]                 = useState('');
+  const [password, setPassword]           = useState('');
+  const [confirmPw, setConfirmPw]         = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [authError, setAuthError]         = useState('');
+  const [emailSent, setEmailSent]         = useState<'verify' | 'reset' | null>(null);
+  const [marketing, setMarketing]         = useState(false);
+
+  function switchMode(next: AuthMode) {
+    setMode(next);
     setAuthError('');
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: redirectTo },
-    });
-    setEmailLoading(false);
-    if (error) setAuthError(error.message);
-    else setEmailSent(true);
+    setPassword('');
+    setConfirmPw('');
   }
 
+  function callbackUrl(): string {
+    if (typeof window === 'undefined') return '';
+    const sp = new URLSearchParams(window.location.search);
+    const after = sp.get('redirect') ?? (sp.get('venue') ? `/claim?venue=${sp.get('venue')}` : '/dashboard');
+    return `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(after)}`;
+  }
+
+  async function signInGoogle() {
+    setAuthError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: callbackUrl() },
+    });
+    if (error) setAuthError(error.message);
+  }
+
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true); setAuthError('');
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setLoading(false);
+    if (error) setAuthError(friendlyError(error.message));
+    // success → onAuthStateChange in ClaimPageContent handles redirect
+  }
+
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 8) { setAuthError('Password must be at least 8 characters.'); return; }
+    if (password !== confirmPw) { setAuthError("Passwords don't match."); return; }
+    setLoading(true); setAuthError('');
+    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+    setLoading(false);
+    if (error) { setAuthError(friendlyError(error.message)); return; }
+    if (!data.session) setEmailSent('verify'); // email confirmation required
+    // if data.session exists, onAuthStateChange fires and parent redirects
+  }
+
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true); setAuthError('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : '',
+    });
+    setLoading(false);
+    if (error) setAuthError(error.message);
+    else setEmailSent('reset');
+  }
+
+  // ── Email-sent success states ─────────────────────────────────────────────
   if (emailSent) {
     return (
       <div style={{ background: C.white, borderRadius: 20, padding: '36px 28px', textAlign: 'center', boxShadow: '0 8px 40px rgba(10,26,51,0.08)' }}>
         <div style={{ fontSize: 42, marginBottom: 16 }}>📬</div>
-        <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: '0 0 10px' }}>
+        <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 24, textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: '0 0 10px' }}>
           Check your inbox
         </h2>
         <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.55, margin: '0 0 24px' }}>
-          We sent a sign-in link to <strong>{email}</strong>. Click it to continue{venueName ? ` claiming ${venueName}` : ''}.
+          {emailSent === 'verify'
+            ? <>We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</>
+            : <>We sent a password reset link to <strong>{email}</strong>.</>}
         </p>
         <button
-          onClick={() => setEmailSent(false)}
+          onClick={() => { setEmailSent(null); setMode('signin'); }}
           style={{ background: 'transparent', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.greenDark, cursor: 'pointer', textDecoration: 'underline' }}
         >
-          Use a different email
+          Back to sign in
         </button>
       </div>
     );
   }
 
-  return (
-    <div style={{ background: C.white, borderRadius: 20, padding: '28px', boxShadow: '0 8px 40px rgba(10,26,51,0.08)' }}>
-      <form onSubmit={sendMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <input
-          type="email" required value={email} onChange={e => setEmail(e.target.value)}
-          placeholder="your@email.com"
-          style={{ width: '100%', boxSizing: 'border-box', border: `1.5px solid ${C.borderMed}`, borderRadius: 11, padding: '12px 14px', fontFamily: FONT_BODY, fontSize: 14, color: C.navy, outline: 'none' }}
-        />
+  // ── Forgot password ───────────────────────────────────────────────────────
+  if (mode === 'forgot') {
+    return (
+      <div style={{ background: C.white, borderRadius: 20, padding: '28px', boxShadow: '0 8px 40px rgba(10,26,51,0.08)' }}>
         <button
-          type="submit" disabled={emailLoading || !email.trim()}
-          style={{ background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '13px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: emailLoading ? 'wait' : 'pointer', opacity: !email.trim() ? 0.5 : 1 }}
+          onClick={() => switchMode('signin')}
+          style={{ background: 'none', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.greenDark, cursor: 'pointer', padding: '0 0 18px 0', textDecoration: 'underline', display: 'block' }}
         >
-          {emailLoading ? 'Sending…' : 'Send magic link'}
+          ← Back to sign in
         </button>
-      </form>
-
-      {authError && (
-        <div style={{ marginTop: 12, fontSize: 13, color: '#9A2A2A', background: '#FBE3E0', borderRadius: 10, padding: '10px 14px' }}>
-          {authError}
+        <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.textMuted, marginBottom: 14 }}>
+          Reset password
         </div>
-      )}
+        <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" style={INPUT} />
+          {authError && <ErrorBox msg={authError} />}
+          <PrimaryBtn disabled={!email.trim()} loading={loading} label="Send reset link" loadingLabel="Sending…" />
+        </form>
+      </div>
+    );
+  }
 
-      <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+  // ── Sign in ───────────────────────────────────────────────────────────────
+  if (mode === 'signin') {
+    return (
+      <div style={{ background: C.white, borderRadius: 20, padding: '28px', boxShadow: '0 8px 40px rgba(10,26,51,0.08)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <GoogleButton onClick={signInGoogle} />
+        <Divider />
+        <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" style={INPUT} />
+          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" style={INPUT} />
+          {authError && <ErrorBox msg={authError} />}
+          <PrimaryBtn disabled={!email.trim() || !password} loading={loading} label="Sign in" loadingLabel="Signing in…" />
+          <button
+            type="button" onClick={() => switchMode('forgot')}
+            style={{ background: 'none', border: 'none', fontFamily: FONT_BODY, fontSize: 12, color: C.textSub, cursor: 'pointer', textAlign: 'left', padding: 0 }}
+          >
+            Forgot password?
+          </button>
+        </form>
+        <p style={{ textAlign: 'center', fontSize: 13, color: C.textSub, margin: 0 }}>
+          Don&apos;t have an account?{' '}
+          <button onClick={() => switchMode('signup')} style={{ background: 'none', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.greenDark, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+            Create one
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  // ── Sign up ───────────────────────────────────────────────────────────────
+  return (
+    <div style={{ background: C.white, borderRadius: 20, padding: '28px', boxShadow: '0 8px 40px rgba(10,26,51,0.08)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <GoogleButton onClick={signInGoogle} />
+      <Divider />
+      <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" style={INPUT} />
+        <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 8 characters)" style={INPUT} />
+        <input type="password" required value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Confirm password" style={INPUT} />
+        {authError && <ErrorBox msg={authError} />}
+        <PrimaryBtn disabled={!email.trim() || !password || !confirmPw} loading={loading} label="Create account" loadingLabel="Creating account…" />
+      </form>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <p style={{ fontSize: 11, color: C.textMuted, margin: 0, lineHeight: 1.6 }}>
           By signing up you agree to our{' '}
           <Link href="/privacy" style={{ color: C.greenDark, textDecoration: 'underline' }}>privacy policy</Link>
@@ -102,35 +241,35 @@ function AuthSection({ venueName }: { venueName: string }) {
           <Link href="/terms" style={{ color: C.greenDark, textDecoration: 'underline' }}>terms and conditions</Link>.
         </p>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={marketingConsent}
-            onChange={e => setMarketingConsent(e.target.checked)}
-            style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }}
-          />
+          <input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)} style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.6 }}>
             I&apos;d like to receive email updates about growing my venue&apos;s reach.
           </span>
         </label>
       </div>
+      <p style={{ textAlign: 'center', fontSize: 13, color: C.textSub, margin: 0 }}>
+        Already have an account?{' '}
+        <button onClick={() => switchMode('signin')} style={{ background: 'none', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.greenDark, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+          Sign in
+        </button>
+      </p>
     </div>
   );
 }
 
 // ─── Verification form (authenticated) ───────────────────────────────────────
 function VerifyForm({ session, venueId, venueName }: { session: Session; venueId: string | null; venueName: string }) {
-  const [role, setRole] = useState('');
-  const [note, setNote] = useState('');
+  const [role, setRole]           = useState('');
+  const [note, setNote]           = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState('');
+  const [done, setDone]           = useState(false);
+  const [error, setError]         = useState('');
 
   const userEmail = session.user?.email ?? '';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
-    setError('');
+    setSubmitting(true); setError('');
     const { error: err } = await supabase.from('venue_claims').insert({
       venue_id: venueId ?? null,
       venue_name: venueName || null,
@@ -169,7 +308,6 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
         <span style={{ fontSize: 16 }}>✓</span>
         <span style={{ fontSize: 13, fontWeight: 600, color: C.greenDark }}>Signed in as {userEmail}</span>
       </div>
-
       <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.greenDark, marginBottom: 6 }}>
         Almost done
       </div>
@@ -179,7 +317,6 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
       <p style={{ fontSize: 13, color: C.textSub, margin: '0 0 24px' }}>
         Just confirm your role and we will get you verified within 24 hours.
       </p>
-
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.navy, marginBottom: 6, letterSpacing: 0.3 }}>Your role at {venueName || 'this venue'}</label>
@@ -205,9 +342,7 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
             style={{ width: '100%', boxSizing: 'border-box', border: `1.5px solid ${C.borderMed}`, borderRadius: 11, padding: '11px 14px', fontFamily: FONT_BODY, fontSize: 14, color: C.navy, outline: 'none', resize: 'vertical' }}
           />
         </div>
-        {error && (
-          <div style={{ fontSize: 13, color: '#9A2A2A', background: '#FBE3E0', borderRadius: 10, padding: '10px 14px' }}>{error}</div>
-        )}
+        {error && <ErrorBox msg={error} />}
         <button
           type="submit" disabled={submitting || !role}
           style={{ background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '14px', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, cursor: submitting ? 'wait' : 'pointer', opacity: !role ? 0.5 : 1 }}
@@ -223,27 +358,20 @@ function VerifyForm({ session, venueId, venueName }: { session: Session; venueId
 function ClaimPageContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const venueId = params.get('venue');
+  const venueId          = params.get('venue');
   const redirectAfterAuth = params.get('redirect');
 
   const [venueName, setVenueName] = useState('');
   const [authState, setAuthState] = useState<'loading' | 'unauthenticated' | 'authenticated'>('loading');
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession]     = useState<Session | null>(null);
 
-  // Handle OAuth / magic-link redirect code exchange + listen for auth changes
   useEffect(() => {
     async function init() {
-      // PKCE flow: exchange ?code= if present
-      const code = new URLSearchParams(window.location.search).get('code');
-      if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
-      }
       const { data: { session: s } } = await supabase.auth.getSession();
       setSession(s);
       setAuthState(s ? 'authenticated' : 'unauthenticated');
-      if (s && redirectAfterAuth && redirectAfterAuth.startsWith('/')) {
+      if (s && redirectAfterAuth?.startsWith('/')) {
         router.push(redirectAfterAuth);
-        return;
       }
     }
     init();
@@ -251,14 +379,11 @@ function ClaimPageContent() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
       setSession(s);
       setAuthState(s ? 'authenticated' : 'unauthenticated');
-      if (s && redirectAfterAuth && redirectAfterAuth.startsWith('/')) {
-        router.push(redirectAfterAuth);
-      }
+      if (s && redirectAfterAuth?.startsWith('/')) router.push(redirectAfterAuth);
     });
     return () => subscription.unsubscribe();
   }, [router, redirectAfterAuth]);
 
-  // Fetch venue name
   useEffect(() => {
     if (!venueId) return;
     supabase.from('venues').select('name').eq('id', venueId).single().then(({ data }) => {
@@ -266,12 +391,11 @@ function ClaimPageContent() {
     });
   }, [venueId]);
 
-  const isLoading = authState === 'loading';
-
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '48px 20px 80px' }}>
-      {isLoading ? (
+      {authState === 'loading' ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: C.textMuted, fontSize: 14 }}>Loading…</div>
+
       ) : authState === 'authenticated' && session ? (
         <>
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
@@ -281,15 +405,15 @@ function ClaimPageContent() {
           </div>
           <VerifyForm session={session} venueId={venueId} venueName={venueName} />
         </>
+
       ) : (
         <>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(28px,5vw,38px)', textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: '0 0 8px', lineHeight: 1.05 }}>
+            <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(28px,5vw,38px)', textTransform: 'uppercase', letterSpacing: 0.4, color: C.navy, margin: 0, lineHeight: 1.05 }}>
               Sign in or create<br />an account
             </h1>
-            <p style={{ fontSize: 14, color: C.textSub, margin: 0 }}>No password needed.</p>
           </div>
-          <AuthSection venueName={venueName} />
+          <AuthSection />
         </>
       )}
     </div>
