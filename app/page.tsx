@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { VenuePin } from './components/MapView';
 import PhotoCarousel from './components/PhotoCarousel';
 import { supabase } from '@/lib/supabase';
+import { flagFor } from '@/lib/teamFlags';
 
 const MapView = dynamic(() => import('./components/MapView'), { ssr: false });
 
@@ -23,28 +24,6 @@ const FONT_BODY = "'Inter', system-ui, sans-serif";
 
 const capitalise = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-// ─── Team flags ───────────────────────────────────────────────────────────────
-const TEAM_FLAGS: Record<string, string> = {
-  'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-  'France': '🇫🇷', 'Germany': '🇩🇪', 'Spain': '🇪🇸', 'Portugal': '🇵🇹',
-  'Italy': '🇮🇹', 'Netherlands': '🇳🇱', 'Belgium': '🇧🇪', 'Norway': '🇳🇴',
-  'Denmark': '🇩🇰', 'Sweden': '🇸🇪', 'Switzerland': '🇨🇭', 'Poland': '🇵🇱',
-  'Croatia': '🇭🇷', 'Serbia': '🇷🇸', 'Czech Republic': '🇨🇿', 'Turkey': '🇹🇷',
-  'Ukraine': '🇺🇦', 'Austria': '🇦🇹', 'Hungary': '🇭🇺', 'Slovakia': '🇸🇰',
-  'Greece': '🇬🇷', 'Romania': '🇷🇴', 'Iceland': '🇮🇸',
-  'Brazil': '🇧🇷', 'Argentina': '🇦🇷', 'Colombia': '🇨🇴', 'Uruguay': '🇺🇾',
-  'Chile': '🇨🇱', 'Ecuador': '🇪🇨', 'Peru': '🇵🇪', 'Bolivia': '🇧🇴',
-  'Venezuela': '🇻🇪', 'Paraguay': '🇵🇾',
-  'USA': '🇺🇸', 'Mexico': '🇲🇽', 'Canada': '🇨🇦', 'Costa Rica': '🇨🇷',
-  'Honduras': '🇭🇳', 'Panama': '🇵🇦', 'Jamaica': '🇯🇲',
-  'Senegal': '🇸🇳', 'Ghana': '🇬🇭', 'Nigeria': '🇳🇬', 'Morocco': '🇲🇦',
-  'Ivory Coast': '🇨🇮', 'Cameroon': '🇨🇲', 'Algeria': '🇩🇿', 'Tunisia': '🇹🇳',
-  'Egypt': '🇪🇬', 'South Africa': '🇿🇦', 'DR Congo': '🇨🇩', 'Zambia': '🇿🇲',
-  'Japan': '🇯🇵', 'South Korea': '🇰🇷', 'Australia': '🇦🇺', 'China PR': '🇨🇳',
-  'Iran': '🇮🇷', 'Iraq': '🇮🇶', 'Saudi Arabia': '🇸🇦', 'Indonesia': '🇮🇩',
-  'New Zealand': '🇳🇿',
-};
-const flagFor = (team: string) => TEAM_FLAGS[team] ?? '🏳️';
 
 // ─── Kickoff helpers ──────────────────────────────────────────────────────────
 function kickoffInfo(isoStr: string): { display: string; koRank: number; late: boolean } {
@@ -218,11 +197,6 @@ const FILTER_LABELS: Record<string, string> = {
   p1: '£', p2: '££', p3: '£££',
 };
 
-const TAG_LABELS: Record<string, string> = {
-  bigscreen: 'Big screen', outdoor: 'Outdoor screen', late: 'Open late',
-  walkins: 'Walk-ins', kitchen: 'Full kitchen', book: 'Book a table',
-};
-
 const MOBILE_FILTERS = [
   { key: 'outdoor',    label: 'Outdoor' },
   { key: 'chilled',    label: 'Chilled' },
@@ -313,11 +287,11 @@ function LateNightBanner({ kickoff, count }: { kickoff: string; count: number })
 // ─── Venue card ───────────────────────────────────────────────────────────────
 interface VenueCardProps {
   venue: Venue; index: number; active: boolean;
-  onActivate: () => void; onReserve: () => void;
+  onActivate: () => void;
 }
-function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCardProps) {
+function VenueCard({ venue: v, index, active, onActivate }: VenueCardProps) {
   const full = v.space === 'full';
-  const tags = v.setupTags.map(k => TAG_LABELS[k] ?? k).filter(Boolean);
+  const energyTag = v.autoTags.includes('lively') ? 'Lively' : v.autoTags.includes('chilled') ? 'Chilled' : null;
 
   return (
     <article id={`venue-${v.id}`} onClick={onActivate} style={{ background: C.white, border: `1px solid ${active ? C.green : C.border}`, borderRadius: 20, overflow: 'hidden', boxShadow: active ? `0 0 0 3px rgba(0,179,104,0.2), 0 8px 24px rgba(10,26,51,0.08)` : '0 8px 24px rgba(10,26,51,0.05)', marginBottom: 18, transition: 'box-shadow .2s, border-color .2s', opacity: full ? 0.85 : 1, cursor: 'pointer' }}>
@@ -355,7 +329,7 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 25, letterSpacing: 0.4, textTransform: 'uppercase', margin: 0, lineHeight: 1, color: C.navy }}>{v.name}</h3>
         </div>
         <div style={{ fontSize: 13, color: C.textSub, marginTop: 7 }}>
-          {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.priceLevel ? ` · ${v.priceLevel}` : ''}{v.capacity > 0 ? ` · capacity ${v.capacity}` : ''}
+          {capitalise(v.type)}{v.area ? ` · ${v.area}` : ''}{v.priceLevel ? ` · ${v.priceLevel}` : ''}
         </div>
 
         {/* Availability — hidden until venues can update live */}
@@ -370,10 +344,6 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
             <span className="wtw-pulse-slow" style={{ width: 8, height: 8, borderRadius: 999, background: C.green, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: C.greenDark }}>Showing all World Cup fixtures</span>
           </div>
-        ) : v.gamesPolicy === 'unknown' ? (
-          <div style={{ marginTop: 10, background: '#FFFBF0', borderRadius: 12, padding: '10px 13px', fontSize: 13, color: '#8A5A00', border: `1px solid rgba(255,178,46,0.3)` }}>
-            Contact venue to confirm which games they&apos;re showing
-          </div>
         ) : (
           <>
             {v.primaryFixture ? (
@@ -387,11 +357,7 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
                 </span>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 600, color: C.navy, flexShrink: 0 }}>{v.primaryFixture.kickoff}</span>
               </div>
-            ) : (
-              <div style={{ marginTop: 10, background: C.bg, borderRadius: 12, padding: '10px 13px', fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>
-                No fixtures linked yet
-              </div>
-            )}
+            ) : null}
             {v.allFixtures.length > 1 && v.allFixtures.slice(1, 3).map(fx => (
               <div key={fx.id} style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6, background: C.bg, borderRadius: 10, padding: '8px 13px' }}>
                 <span style={{ width: 7, height: 7, borderRadius: 999, background: fx.confirmed ? C.green : C.amber, flexShrink: 0 }} />
@@ -404,86 +370,23 @@ function VenueCard({ venue: v, index, active, onActivate, onReserve }: VenueCard
           </>
         )}
 
-        {/* Setup tags */}
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 13 }}>
-            {tags.map(f => (
-              <span key={f} style={{ fontSize: 12, fontWeight: 600, color: '#42506A', background: C.white, border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: '5px 10px' }}>{f}</span>
-            ))}
-          </div>
+        {/* Energy tag */}
+        {energyTag && (
+          <span style={{ display: 'inline-block', marginTop: 9, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', borderRadius: 999, padding: '4px 10px', background: energyTag === 'Lively' ? 'rgba(255,178,46,0.2)' : '#DDF4E8', color: energyTag === 'Lively' ? '#7A4A00' : '#0A6B45' }}>
+            {energyTag}
+          </span>
         )}
 
-        {/* Claim CTA */}
-        {!v.claimed && (
-          <div style={{ marginTop: 13, padding: '10px 13px', background: C.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: C.textSub }}>Own this venue?</span>
-            <Link href={`/claim?venue=${v.id}`} onClick={e => e.stopPropagation()} style={{ fontSize: 12, fontWeight: 700, color: C.greenDark, textDecoration: 'none' }}>
-              Claim your listing →
-            </Link>
-          </div>
-        )}
-
-        {/* Book your spot CTA */}
-        {(v.bookable === 'yes' || v.bookingUrl) && (
-          <a
-            href={v.bookingUrl ?? v.website ?? '#'}
-            target="_blank" rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 13, background: C.green, color: C.white, borderRadius: 12, padding: '12px 16px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, letterSpacing: 0.2 }}
-          >
-            Book your spot
-          </a>
-        )}
-
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 15 }}>
-          <button onClick={e => { e.stopPropagation(); onReserve(); }} style={{ flex: 1, border: 'none', borderRadius: 12, padding: 12, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer', color: C.white, background: full ? C.navy : C.green }}>
-            {full ? 'Join waitlist' : 'Reserve'}
-          </button>
-          <button style={{ flex: 1, background: C.white, color: C.navy, border: `1.5px solid ${C.borderHeavy}`, borderRadius: 12, padding: 12, fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-            Get directions
-          </button>
-        </div>
+        {/* See full listing */}
+        <Link
+          href={`/venues/${v.id}`}
+          onClick={e => e.stopPropagation()}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 14, background: C.navy, color: C.white, borderRadius: 12, padding: '12px 16px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, letterSpacing: 0.2 }}
+        >
+          See full listing
+        </Link>
       </div>
     </article>
-  );
-}
-
-// ─── Booking modal ────────────────────────────────────────────────────────────
-interface BookingModalProps { venue: Venue; onClose: () => void; }
-function BookingModal({ venue: v, onClose }: BookingModalProps) {
-  const m = SPACE_META[v.space];
-  const full = v.space === 'full';
-  const fx = v.primaryFixture;
-  const methodTitle = { website: 'Book online', phone: 'Call to reserve', walkins: 'Walk-ins only', email: 'Email to book' }[v.bookingMethod] ?? 'Book';
-  const methodDesc: Record<string, string> = {
-    website: `Head to ${v.website ?? 'their website'} to grab a table. Takes 2 minutes and you'll get a confirmation.`,
-    phone:   `Call ${v.phone ?? 'the venue'} to check availability and reserve. Lines open from midday until kickoff.`,
-    walkins: "This venue doesn't take advance bookings. Just show up early to bag the best spot.",
-    email:   `Email ${v.email ?? 'the venue'} with your name, party size and the match you're coming for.`,
-  };
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'rgba(10,26,51,0.55)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, width: '100%', maxWidth: 440, borderRadius: 20, padding: 22, boxShadow: '0 30px 80px rgba(0,0,0,0.35)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.greenDark }}>Reserve your spot</div>
-            <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, letterSpacing: 0.4, textTransform: 'uppercase', margin: '6px 0 0', lineHeight: 1, color: C.navy }}>{v.name}</h3>
-            {fx && <div style={{ fontSize: 13, color: C.textSub, marginTop: 5 }}>{fx.homeFlag} {fx.home} v {fx.away} {fx.awayFlag} · {fx.kickoff}</div>}
-          </div>
-          <button onClick={onClose} style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 999, background: C.bg, border: 'none', fontSize: 16, color: C.textSub, cursor: 'pointer' }}>✕</button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 16, borderRadius: 12, padding: '9px 13px', background: m.bg, color: m.color }}>
-          <span className={m.pulse ? 'wtw-pulse-slow' : ''} style={{ width: 9, height: 9, borderRadius: 999, flexShrink: 0, background: m.dot }} />
-          <span style={{ fontSize: 13, fontWeight: 800 }}>{m.label}</span>
-        </div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, margin: '18px 0 7px' }}>{methodTitle}</div>
-        <p style={{ fontSize: 13, color: C.textSub, margin: '0 0 13px', lineHeight: 1.45 }}>{methodDesc[v.bookingMethod] ?? ''}</p>
-        <button style={{ width: '100%', background: full ? C.navy : C.green, color: C.white, border: 'none', borderRadius: 13, padding: 14, fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-          {full ? 'Join the waitlist' : v.bookingMethod === 'walkins' ? "Got it, I'll walk in" : methodTitle}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -504,7 +407,6 @@ export default function Page() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [spaceOnly, setSpaceOnly] = useState(false);
   const [activeVenue, setActiveVenue] = useState<string | null>(null);
-  const [bookingId, setBookingId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
   const [vw, setVw] = useState(1400);
 
@@ -642,8 +544,6 @@ export default function Page() {
     if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: 'smooth' });
   }, []);
 
-  const bookingVenue = bookingId ? venues.find(v => v.id === bookingId) ?? null : null;
-
   const draftCount = venues.filter(v => matchesFilters(v, draftFilters)).length;
 
   const venueListContent = loading ? (
@@ -667,8 +567,7 @@ export default function Page() {
       {isOvernightMatch && <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />}
       {displayList.map((v, i) => (
         <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
-          onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
-          onReserve={() => setBookingId(v.id)} />
+          onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)} />
       ))}
     </>
   );
@@ -969,10 +868,6 @@ export default function Page() {
         </div>
       )}
 
-      {/* ── Booking modal ── */}
-      {bookingVenue && (
-        <BookingModal venue={bookingVenue} onClose={() => setBookingId(null)} />
-      )}
     </div>
   );
 }
