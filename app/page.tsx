@@ -70,6 +70,11 @@ function isOvernight(isoStr: string): boolean {
   return bstH >= 1 && bstH < 6;
 }
 
+function isLateKickoff(isoStr: string): boolean {
+  const bstH = (new Date(isoStr).getUTCHours() + 1) % 24;
+  return bstH >= 21 || bstH < 6;
+}
+
 function dayLabel(isoStr: string): string {
   const d = new Date(isoStr);
   const now = new Date();
@@ -117,6 +122,7 @@ interface Venue {
   hue: number; space: Space; priceLevel: string; photos: string[];
   gamesPolicy: string; bookable: string; bookingUrl?: string;
   primaryFixture: FixtureLink | null; allFixtures: FixtureLink[];
+  crowdTeam?: string; tier?: 1 | 2 | 3; tierNation?: string;
 }
 
 interface RawVenueFixture {
@@ -131,6 +137,7 @@ interface RawDbVenue {
   phone?: string; email?: string; website?: string; booking_method?: string;
   capacity?: number; setup_tags?: string[]; price_level?: string;
   is_featured?: boolean; verified?: boolean; listing_scope?: string; claimed?: boolean;
+  crowd_team?: string;
   bookable?: string; booking_url?: string; photo_url?: string; auto_tags?: string[] | null;
   venue_photos?: Array<{ photo_url: string; display_order: number }>;
   venue_fixtures?: RawVenueFixture[];
@@ -177,6 +184,7 @@ function mapDbVenue(raw: RawDbVenue, selectedFixtureId: string): Venue {
         !(raw.venue_photos?.length) && raw.photo_url ? [raw.photo_url] : []
       ),
     primaryFixture, allFixtures,
+    crowdTeam: raw.crowd_team ?? undefined,
   };
 }
 
@@ -200,6 +208,26 @@ function matchesFilters(v: Venue, f: Record<string, boolean>): boolean {
       default:           return v.setupTags.includes(k);
     }
   });
+}
+
+// ─── Three-tier venue resolution ─────────────────────────────────────────────
+function getVenueTier(v: Venue, fx: DbFixture): { tier: 1 | 2 | 3 | null; nation?: string } {
+  const bstH = (new Date(fx.kickoff_at).getUTCHours() + 1) % 24;
+  const needsLate = bstH >= 21 || bstH < 6;
+  const isLateEnough = !needsLate || v.autoTags.includes('late_friendly') || v.setupTags.includes('late');
+  if (!isLateEnough) return { tier: null };
+
+  const home = fx.home_team.toLowerCase();
+  const away = fx.away_team.toLowerCase();
+  if (v.crowdTeam) {
+    const ct = v.crowdTeam.toLowerCase();
+    if (ct.includes(home) || ct.includes(away) || home.includes(ct) || away.includes(ct)) {
+      const nation = ct.includes(home) ? fx.home_team : fx.away_team;
+      return { tier: 1, nation };
+    }
+  }
+  if (v.gamesPolicy === 'all_games') return { tier: 2 };
+  return { tier: 3 };
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -314,8 +342,9 @@ function LateNightBanner({ kickoff, count }: { kickoff: string; count: number })
 interface VenueCardProps {
   venue: Venue; index: number; active: boolean;
   onActivate: () => void;
+  matchIsLate?: boolean;
 }
-function VenueCard({ venue: v, index, active, onActivate }: VenueCardProps) {
+function VenueCard({ venue: v, index, active, onActivate, matchIsLate }: VenueCardProps) {
   const full = v.space === 'full';
   const energyTag = v.autoTags.includes('lively') ? 'Lively' : v.autoTags.includes('chilled') ? 'Chilled' : null;
 
@@ -400,6 +429,18 @@ function VenueCard({ venue: v, index, active, onActivate }: VenueCardProps) {
         {energyTag && (
           <span style={{ display: 'inline-block', marginTop: 9, fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', borderRadius: 999, padding: '4px 10px', background: energyTag === 'Lively' ? 'rgba(255,178,46,0.2)' : '#DDF4E8', color: energyTag === 'Lively' ? '#7A4A00' : '#0A6B45' }}>
             {energyTag}
+          </span>
+        )}
+
+        {/* Tier badges — shown when a specific match is selected */}
+        {v.tier === 1 && v.tierNation && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, borderRadius: 999, padding: '5px 11px', fontSize: 12, fontWeight: 700, background: 'rgba(0,179,104,0.12)', color: C.greenDark }}>
+            {flagFor(v.tierNation)} {v.tierNation} fans here
+          </span>
+        )}
+        {v.tier === 3 && matchIsLate && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, borderRadius: 999, padding: '5px 11px', fontSize: 12, fontWeight: 700, background: 'rgba(255,178,46,0.12)', color: '#7A4A00' }}>
+            🌙 Open late
           </span>
         )}
 
@@ -524,9 +565,19 @@ export default function Page() {
 
   // ── Filter + sort ──
   const loc = locQuery.trim().toLowerCase();
+  const selectedDbFixture = activeMatch !== 'all' ? (dbFixtures.find(f => f.id === activeMatch) ?? null) : null;
 
-  let list = venues.filter(v =>
-    (activeMatch === 'all' || v.allFixtures.some(f => f.id === activeMatch)) &&
+  // Three-tier venue resolution: when a match is selected, assign each venue a tier
+  // Tier 1 = nation affinity (crowd_team matches), Tier 2 = all_games policy, Tier 3 = any open venue
+  const tieredVenues: Venue[] = activeMatch === 'all' || !selectedDbFixture
+    ? venues
+    : venues.map(v => {
+        const { tier, nation } = getVenueTier(v, selectedDbFixture);
+        return { ...v, tier: tier ?? undefined, tierNation: nation };
+      });
+
+  let list = tieredVenues.filter(v =>
+    (activeMatch === 'all' || v.tier !== undefined) &&
     (!loc || v.area.toLowerCase().includes(loc) || v.name.toLowerCase().includes(loc)) &&
     (!spaceOnly && !filters.space || v.space === 'now') &&
     matchesFilters(v, filters),
@@ -534,12 +585,18 @@ export default function Page() {
 
   if (sortBy === 'space') list = [...list].sort((a, b) => SPACE_META[a.space].rank - SPACE_META[b.space].rank);
   else if (sortBy === 'kickoff') list = [...list].sort((a, b) => (a.primaryFixture?.koRank ?? 9999) - (b.primaryFixture?.koRank ?? 9999));
-  else list = [...list].sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+  else list = [...list].sort((a, b) => {
+    if (activeMatch !== 'all') {
+      const ta = a.tier ?? 4, tb = b.tier ?? 4;
+      if (ta !== tb) return ta - tb;
+    }
+    return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+  });
 
-  // ── Overnight treatment ──
-  const selectedDbFixture = activeMatch !== 'all' ? (dbFixtures.find(f => f.id === activeMatch) ?? null) : null;
+  // ── Late-night treatment ──
+  const isLateMatch = selectedDbFixture ? isLateKickoff(selectedDbFixture.kickoff_at) : false;
   const isOvernightMatch = selectedDbFixture ? isOvernight(selectedDbFixture.kickoff_at) : false;
-  const displayList = isOvernightMatch ? list.filter(v => v.setupTags.includes('late')) : list;
+  const displayList = list;
   const watchAtHome = isOvernightMatch && displayList.length === 0;
   const selectedKickoff = selectedDbFixture ? kickoffInfo(selectedDbFixture.kickoff_at).display : '';
 
@@ -580,20 +637,32 @@ export default function Page() {
   ) : watchAtHome ? (
     <WatchAtHomeCard fixture={selectedDbFixture!} kickoff={selectedKickoff} onBrowse={() => setActiveMatch('all')} />
   ) : displayList.length === 0 ? (
-    <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
-      <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues match</div>
-      <div style={{ fontSize: 14 }}>Try clearing some filters or searching a different area.</div>
-      <button onClick={() => { setFilters({}); setSpaceOnly(false); setActiveMatch('all'); setLocQuery(''); }} style={{ marginTop: 20, background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '12px 24px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-        Clear all filters
-      </button>
-    </div>
+    isLateMatch ? (
+      <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>🌙</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues confirmed open for this late kickoff yet</div>
+        <div style={{ fontSize: 14, lineHeight: 1.5 }}>Check back closer to the match, or browse venues open late.</div>
+        <button onClick={() => { setActiveMatch('all'); toggleFilter('late'); }} style={{ marginTop: 20, background: C.navy, color: C.white, border: 'none', borderRadius: 12, padding: '12px 24px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          See late-night venues
+        </button>
+      </div>
+    ) : (
+      <div style={{ textAlign: 'center', padding: '56px 24px', color: C.textMuted }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>🔍</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No venues match</div>
+        <div style={{ fontSize: 14 }}>Try clearing some filters or searching a different area.</div>
+        <button onClick={() => { setFilters({}); setSpaceOnly(false); setActiveMatch('all'); setLocQuery(''); }} style={{ marginTop: 20, background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '12px 24px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          Clear all filters
+        </button>
+      </div>
+    )
   ) : (
     <>
-      {isOvernightMatch && <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />}
+      {isLateMatch && <LateNightBanner kickoff={selectedKickoff} count={displayList.length} />}
       {displayList.map((v, i) => (
         <VenueCard key={v.id} venue={v} index={i} active={activeVenue === v.id}
-          onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)} />
+          onActivate={() => setActiveVenue(id => id === v.id ? null : v.id)}
+          matchIsLate={isLateMatch} />
       ))}
     </>
   );
