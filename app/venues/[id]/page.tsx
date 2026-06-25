@@ -125,7 +125,7 @@ export default function VenuePage() {
     ? `https://maps.google.com/?q=${venue.lat},${venue.lng}`
     : `https://maps.google.com/?q=${encodeURIComponent(`${venue.name} ${venue.area ?? ''} London`)}`;
 
-  const isBookable = venue.bookable === 'yes' || !!venue.booking_url;
+  const hasBookingUrl = !!venue.booking_url;
 
   // Tag pills
   type Pill = { label: string; bg: string; color: string };
@@ -138,7 +138,7 @@ export default function VenuePage() {
     tagPills.push({ label: 'Open late', bg: '#F0E8F8', color: '#4A1A6A' });
   if (autoTags.includes('good_for_groups'))
     tagPills.push({ label: 'Good for groups', bg: '#E8EEFA', color: '#1A2A6A' });
-  if (isBookable) tagPills.push({ label: 'Book a table', bg: '#DDF4E8', color: '#0A6B45' });
+  if (hasBookingUrl) tagPills.push({ label: 'Book a table', bg: '#DDF4E8', color: '#0A6B45' });
   else tagPills.push({ label: 'Walk-ins welcome', bg: '#F0F2F5', color: C.textSub });
 
   return (
@@ -261,9 +261,9 @@ export default function VenuePage() {
 
         {/* Action buttons */}
         <div style={{ margin: '20px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {isBookable && (
+          {hasBookingUrl && (
             <a
-              href={venue.booking_url ?? venue.website ?? '#'}
+              href={`/api/track?venue=${venue.id}&type=booking&url=${encodeURIComponent(venue.booking_url!)}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: C.green, color: C.white, borderRadius: 14, padding: '15px 20px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, letterSpacing: 0.2 }}
             >
@@ -280,7 +280,7 @@ export default function VenuePage() {
             </a>
             {venue.website && (
               <a
-                href={venue.website}
+                href={`/api/track?venue=${venue.id}&type=website&url=${encodeURIComponent(venue.website)}`}
                 target="_blank" rel="noopener noreferrer"
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.white, color: C.navy, border: `1.5px solid ${C.borderMed}`, borderRadius: 14, padding: '13px 16px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700 }}
               >

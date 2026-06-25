@@ -742,7 +742,7 @@ export default function ListVenuePage() {
           <div>
             <div style={{ fontFamily: FM, fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.darkGreen }}>Submitted</div>
             <h2 style={{ fontFamily: FB, fontWeight: 700, fontSize: 'clamp(28px,5vw,36px)', letterSpacing: '-0.01em', margin: '10px 0 0', lineHeight: 1.1 }}>You&apos;re on the list</h2>
-            <p style={{ fontSize: 16, color: C.textMuted, margin: '14px 0 0', lineHeight: 1.5 }}>Check your inbox to confirm your email address. If you don&apos;t see it within a few minutes, have a quick look in your spam or junk folder.</p>
+            <p style={{ fontSize: 16, color: C.textMuted, margin: '14px 0 0', lineHeight: 1.5 }}>Create a free account so we can link this listing to you — you&apos;ll be able to confirm fixtures and update your details once we&apos;ve verified you.</p>
 
             <div style={{ marginTop: 24, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, boxShadow: '0 8px 24px rgba(10,26,51,0.05)' }}>
               {summaryTop.map((r) => (
@@ -784,9 +784,9 @@ export default function ListVenuePage() {
         <div style={{ maxWidth: 660, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div>
             {isBenefits && (
-              <button style={{ background: 'transparent', border: 'none', fontFamily: FB, fontSize: 14, fontWeight: 600, color: C.textMuted, cursor: 'pointer', padding: 0 }}>
+              <Link href="/claim" style={{ textDecoration: 'none', fontFamily: FB, fontSize: 14, fontWeight: 600, color: C.textMuted }}>
                 Already listed? <span style={{ color: C.darkGreen, fontWeight: 700 }}>Log in</span>
-              </button>
+              </Link>
             )}
             {isWizard && (
               <button onClick={back} style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '12px 20px', fontFamily: FB, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer' }}>Back</button>
@@ -797,7 +797,7 @@ export default function ListVenuePage() {
           </div>
           <div>
             {isDone ? (
-              <Link href="/" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '13px 24px', fontFamily: FB, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,179,104,0.28)', display: 'inline-block' }}>Explore Where We Watch →</Link>
+              <Link href="/claim?redirect=/dashboard" style={{ textDecoration: 'none', background: C.green, color: C.white, borderRadius: 12, padding: '13px 24px', fontFamily: FB, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 6px 16px rgba(0,179,104,0.28)', display: 'inline-block' }}>Create your account →</Link>
             ) : (
               <button onClick={next} disabled={isWizard && !canContinue} style={primaryBtnStyle(isWizard && !canContinue)}>{primaryLabel}</button>
             )}
