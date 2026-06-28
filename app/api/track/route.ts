@@ -6,11 +6,11 @@ export async function GET(request: NextRequest) {
   const linkType = searchParams.get('type') ?? 'unknown';
   const rawUrl   = searchParams.get('url') ?? '';
 
-  // Only redirect to http(s) URLs — reject anything else
+  // Allow http(s) and tel: — reject everything else
   let destination = '/';
   try {
     const parsed = new URL(rawUrl);
-    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'tel:') {
       destination = rawUrl;
     }
   } catch {}

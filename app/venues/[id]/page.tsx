@@ -125,8 +125,6 @@ export default function VenuePage() {
     ? `https://maps.google.com/?q=${venue.lat},${venue.lng}`
     : `https://maps.google.com/?q=${encodeURIComponent(`${venue.name} ${venue.area ?? ''} London`)}`;
 
-  const hasBookingUrl = !!venue.booking_url;
-
   // Tag pills
   type Pill = { label: string; bg: string; color: string };
   const tagPills: Pill[] = [];
@@ -138,7 +136,8 @@ export default function VenuePage() {
     tagPills.push({ label: 'Open late', bg: '#F0E8F8', color: '#4A1A6A' });
   if (autoTags.includes('good_for_groups'))
     tagPills.push({ label: 'Good for groups', bg: '#E8EEFA', color: '#1A2A6A' });
-  if (hasBookingUrl) tagPills.push({ label: 'Book a table', bg: '#DDF4E8', color: '#0A6B45' });
+  if (venue.booking_url) tagPills.push({ label: 'Bookable online', bg: '#DDF4E8', color: '#0A6B45' });
+  else if (venue.phone) tagPills.push({ label: 'Reservations by phone', bg: '#E8F0FC', color: '#1A3A6A' });
   else tagPills.push({ label: 'Walk-ins welcome', bg: '#F0F2F5', color: C.textSub });
 
   return (
@@ -261,14 +260,26 @@ export default function VenuePage() {
 
         {/* Action buttons */}
         <div style={{ margin: '20px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {hasBookingUrl && (
+          {/* Primary CTA — three honest states */}
+          {venue.booking_url ? (
             <a
-              href={`/api/track?venue=${venue.id}&type=booking&url=${encodeURIComponent(venue.booking_url!)}`}
+              href={`/api/track?venue=${venue.id}&type=booking&url=${encodeURIComponent(venue.booking_url)}`}
               target="_blank" rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: C.green, color: C.white, borderRadius: 14, padding: '15px 20px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, letterSpacing: 0.2 }}
             >
-              Book a table
+              Book for tonight&apos;s game →
             </a>
+          ) : venue.phone ? (
+            <a
+              href={`/api/track?venue=${venue.id}&type=phone&url=${encodeURIComponent(`tel:${venue.phone.replace(/\s/g, '')}`)}`}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: C.navy, color: C.white, borderRadius: 14, padding: '15px 20px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, letterSpacing: 0.2 }}
+            >
+              Call to check availability
+            </a>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#F0F2F5', color: C.textSub, borderRadius: 14, padding: '13px 20px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700 }}>
+              Walk in — no booking needed
+            </div>
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             <a

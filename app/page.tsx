@@ -444,14 +444,34 @@ function VenueCard({ venue: v, index, active, onActivate, matchIsLate }: VenueCa
           </span>
         )}
 
-        {/* See full listing */}
-        <Link
-          href={`/venues/${v.id}`}
-          onClick={e => e.stopPropagation()}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 14, background: C.navy, color: C.white, borderRadius: 12, padding: '12px 16px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, letterSpacing: 0.2 }}
-        >
-          See full listing
-        </Link>
+        {/* Booking CTA */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          {v.bookingUrl ? (
+            <a
+              href={`/api/track?venue=${v.id}&type=booking&url=${encodeURIComponent(v.bookingUrl)}`}
+              onClick={e => e.stopPropagation()}
+              target="_blank" rel="noopener noreferrer"
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.green, color: C.white, borderRadius: 12, padding: '12px 14px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, letterSpacing: 0.1 }}
+            >
+              Book for tonight →
+            </a>
+          ) : v.phone ? (
+            <a
+              href={`/api/track?venue=${v.id}&type=phone&url=${encodeURIComponent(`tel:${v.phone.replace(/\s/g, '')}`)}`}
+              onClick={e => e.stopPropagation()}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.navy, color: C.white, borderRadius: 12, padding: '12px 14px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, letterSpacing: 0.1 }}
+            >
+              Call to check →
+            </a>
+          ) : null}
+          <Link
+            href={`/venues/${v.id}`}
+            onClick={e => e.stopPropagation()}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: v.bookingUrl || v.phone ? 'transparent' : C.navy, color: v.bookingUrl || v.phone ? C.textSub : C.white, border: v.bookingUrl || v.phone ? `1.5px solid ${C.borderHeavy}` : 'none', borderRadius: 12, padding: '12px 14px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, letterSpacing: 0.1, whiteSpace: 'nowrap' }}
+          >
+            {v.bookingUrl || v.phone ? 'More info' : 'See full listing'}
+          </Link>
+        </div>
       </div>
     </article>
   );
