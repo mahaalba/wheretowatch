@@ -18,6 +18,41 @@ const FONT_DISPLAY = "'Anton', sans-serif";
 const FONT_BODY = "'Inter', system-ui, sans-serif";
 const capitalise = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
+// ─── Region system ────────────────────────────────────────────────────────────
+type Region = 'Central' | 'City' | 'West London' | 'North London' | 'South London' | 'East London';
+const REGIONS: Region[] = ['Central', 'City', 'West London', 'North London', 'South London', 'East London'];
+
+const AREA_TO_REGION: Record<string, Region> = {
+  'Belgravia': 'Central', 'Covent Garden': 'Central', 'Fitzrovia': 'Central',
+  'Knightsbridge': 'Central', 'London': 'Central', 'Marylebone': 'Central',
+  'Mayfair': 'Central', 'Soho': 'Central',
+  'City': 'City', 'London Bridge': 'City',
+  'Chelsea': 'West London', 'Chelsea / Fulham Road': 'West London',
+  "Chelsea / King's Road": 'West London', 'Chiswick': 'West London',
+  'Fulham': 'West London', 'Kensington (W14)': 'West London',
+  'Maida Vale': 'West London', 'Notting Hill': 'West London',
+  'Notting Hill (Golborne Rd)': 'West London', 'Paddington': 'West London',
+  'Park Royal / Harlesden': 'West London', "Shepherd's Bush": 'West London',
+  'Belsize Park': 'North London', 'Camden': 'North London',
+  'Finsbury Park': 'North London', 'Hampstead': 'North London',
+  'Holloway': 'North London', 'Newington Green': 'North London',
+  'Stoke Newington': 'North London', 'Tottenham': 'North London',
+  'Brixton': 'South London', 'Elephant & Castle': 'South London',
+  'Stockwell': 'South London', 'Vauxhall': 'South London',
+  'Waterloo / South Bank': 'South London',
+  'Columbia Road': 'East London', 'De Beauvoir': 'East London',
+  'Hackney': 'East London',
+};
+
+function getRegion(area: string): Region {
+  return AREA_TO_REGION[area] ?? 'Central';
+}
+
+// ─── Type labels ──────────────────────────────────────────────────────────────
+const TYPE_LABELS: Record<string, string> = {
+  pub: 'Pub', bar: 'Bar', restaurant: 'Restaurant', outdoor: 'Outdoor',
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface DbFixture {
   id: string; home_team: string; away_team: string;
@@ -25,7 +60,7 @@ interface DbFixture {
 }
 
 interface Venue {
-  id: string; name: string; type: string; area: string;
+  id: string; name: string; type: string; area: string; region: Region;
   phone?: string; bookingUrl?: string;
   isFeatured: boolean; verified: boolean;
   photos: string[]; priceLevel: string;
@@ -50,6 +85,7 @@ function mapVenue(raw: RawDbVenue): Venue {
     .concat(!(raw.venue_photos?.length) && raw.photo_url ? [raw.photo_url] : []);
   return {
     id: raw.id, name: raw.name, type: raw.type ?? 'Venue', area: raw.area ?? '',
+    region: getRegion(raw.area ?? ''),
     phone: raw.phone ?? undefined, bookingUrl: raw.booking_url ?? undefined,
     isFeatured: raw.is_featured ?? false, verified: raw.verified ?? false,
     photos, priceLevel: raw.price_level ?? '',
@@ -84,8 +120,6 @@ function dayLabel(isoStr: string) {
   if (diff === 1) return 'Tomorrow';
   return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
-
-// BST date string "YYYY-MM-DD" for a given ISO UTC timestamp
 function bstDateStr(isoStr: string) {
   const d = new Date(isoStr);
   const bst = new Date(d.getTime() + 3600000);
@@ -96,7 +130,7 @@ function bstDateStr(isoStr: string) {
 function getVenueTier(v: Venue, fx: DbFixture): 1 | 2 | 3 | null {
   const h = kickoffBstH(fx.kickoff_at);
   const needsLate = h >= 21 || h < 6;
-  if (needsLate) return null; // simplified: late matches shown by late_friendly only, but we dropped that complexity
+  if (needsLate) return null;
   if (v.crowdTeam) {
     const ct = v.crowdTeam.toLowerCase();
     const home = fx.home_team.toLowerCase();
@@ -146,14 +180,46 @@ function BookingCTA({ venue: v, large = false }: { venue: Venue; large?: boolean
   );
 }
 
-// ─── Featured venue card ──────────────────────────────────────────────────────
+// ─── Strip card (compact — for horizontal scroll rows) ────────────────────────
+function StripCard({ venue: v }: { venue: Venue }) {
+  return (
+    <article style={{ width: 220, flexShrink: 0, scrollSnapAlign: 'start', background: C.white, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 16px rgba(10,26,51,0.07)', border: `1px solid ${C.border}` }}>
+      <div style={{ position: 'relative', height: 148 }}>
+        <PhotoCarousel photos={v.photos} venueName={v.name} height={148} />
+        {v.isFeatured && (
+          <span style={{ position: 'absolute', top: 8, left: 8, zIndex: 6, background: 'rgba(255,178,46,0.95)', color: '#5C3800', borderRadius: 999, padding: '4px 9px', fontSize: 10, fontWeight: 800, letterSpacing: 0.2 }}>
+            ⭐ Our Pick
+          </span>
+        )}
+        <span style={{ position: 'absolute', top: 8, right: 8, zIndex: 6, background: 'rgba(10,26,51,0.72)', color: C.white, borderRadius: 999, padding: '4px 9px', fontSize: 11, fontWeight: 600, backdropFilter: 'blur(4px)' }}>
+          {v.area}
+        </span>
+      </div>
+      <div style={{ padding: '12px 14px 14px' }}>
+        <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 18, letterSpacing: 0.3, textTransform: 'uppercase', margin: '0 0 3px', lineHeight: 1.05, color: C.navy }}>{v.name}</h3>
+        <div style={{ fontSize: 12, color: C.textSub, marginBottom: 11 }}>{capitalise(v.type)}{v.priceLevel ? ` · ${v.priceLevel}` : ''}</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ flex: 1 }}><BookingCTA venue={v} /></div>
+          <Link href={`/venues/${v.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${C.borderHeavy}`, color: C.textSub, borderRadius: 10, padding: '10px 11px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+            Info
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// ─── Featured venue card (full grid) ──────────────────────────────────────────
 function FeaturedCard({ venue: v }: { venue: Venue }) {
   return (
     <article style={{ background: C.white, borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 20px rgba(10,26,51,0.07)', border: `1px solid ${C.border}` }}>
       <div style={{ position: 'relative', height: 220 }}>
         <PhotoCarousel photos={v.photos} venueName={v.name} height={220} />
+        <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 6, background: 'rgba(255,178,46,0.95)', color: '#5C3800', borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800 }}>
+          ⭐ Our Pick
+        </span>
         {v.verified && (
-          <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 6, background: C.green, color: C.white, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800 }}>
+          <span style={{ position: 'absolute', top: 12, left: 12, zIndex: 6, background: C.green, color: C.white, borderRadius: 999, padding: '5px 11px', fontSize: 11, fontWeight: 800, marginTop: 36 }}>
             ✓ Verified
           </span>
         )}
@@ -184,10 +250,13 @@ function BrowseRow({ venue: v, matchSelected }: { venue: Venue; matchSelected: b
   return (
     <article style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
       <div style={{ flex: 1, minWidth: 200 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 0.3, textTransform: 'uppercase', margin: 0, color: C.navy }}>{v.name}</h3>
+          {v.isFeatured && (
+            <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,178,46,0.18)', color: '#7A4A00', borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap' }}>⭐ Our Pick</span>
+          )}
           {matchSelected && v.tier === 1 && (
-            <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(0,179,104,0.12)', color: C.greenDark, borderRadius: 999, padding: '3px 8px' }}>Nation hub</span>
+            <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(0,179,104,0.12)', color: C.greenDark, borderRadius: 999, padding: '3px 8px', whiteSpace: 'nowrap' }}>Nation hub</span>
           )}
         </div>
         <div style={{ fontSize: 13, color: C.textSub, marginTop: 3 }}>
@@ -211,10 +280,12 @@ export default function Page() {
   const [dbFixtures, setDbFixtures] = useState<DbFixture[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 3 filters
-  const [areaFilter, setAreaFilter] = useState('');
+  // Filters
+  const [regionFilter, setRegionFilter] = useState<Region | ''>('');
   const [matchFilter, setMatchFilter] = useState('all');
   const [bookableFilter, setBookableFilter] = useState<'all' | 'bookable' | 'walkin'>('all');
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [sortOrder, setSortOrder] = useState<'picks' | 'az' | 'match'>('picks');
   const [browseOpen, setBrowseOpen] = useState(false);
 
   const now = useNow();
@@ -254,18 +325,16 @@ export default function Page() {
   }, []);
 
   const venues = useMemo(() => rawVenues.map(mapVenue), [rawVenues]);
-
-  // ── Featured ──
   const featuredVenues = useMemo(() => venues.filter(v => v.isFeatured), [venues]);
 
-  // ── Area options ──
-  const areaOptions = useMemo(() => {
+  // Available venue types from data
+  const availableTypes = useMemo(() => {
     const seen: Record<string, true> = {};
-    venues.forEach(v => { if (v.area) seen[v.area] = true; });
+    venues.forEach(v => { if (v.type && v.type !== 'Venue') seen[v.type] = true; });
     return Object.keys(seen).sort();
   }, [venues]);
 
-  // ── Today's fixtures for match filter ──
+  // ── Today's fixtures ──
   const todayBst = bstDateStr(now.toISOString());
   const todayFixtures = useMemo(
     () => dbFixtures.filter(fx => bstDateStr(fx.kickoff_at) === todayBst),
@@ -282,28 +351,80 @@ export default function Page() {
     }) ?? null;
   }, [dbFixtures, now]);
 
-  // ── Browse list (apply 3 filters) ──
+  // ── Browse filter + sort ──
   const selectedFx = matchFilter !== 'all' ? (dbFixtures.find(f => f.id === matchFilter) ?? null) : null;
+
+  // Fixture used for "Nearest match tonight" sort
+  const matchSortFx = useMemo(() => {
+    if (selectedFx) return selectedFx;
+    if (sortOrder === 'match' && todayFixtures.length > 0) return todayFixtures[0];
+    return null;
+  }, [selectedFx, sortOrder, todayFixtures]);
 
   const browseList = useMemo(() => {
     let list = venues;
-    if (areaFilter) list = list.filter(v => v.area === areaFilter);
-    if (selectedFx) {
-      list = list.map(v => ({ ...v, tier: getVenueTier(v, selectedFx) ?? undefined }))
-        .filter(v => v.tier !== undefined);
-      list = [...list].sort((a, b) => (a.tier ?? 4) - (b.tier ?? 4));
-    }
+    if (regionFilter) list = list.filter(v => v.region === regionFilter);
+    if (typeFilter.length) list = list.filter(v => typeFilter.includes(v.type));
     if (bookableFilter === 'bookable') list = list.filter(v => v.bookingUrl || v.phone);
     if (bookableFilter === 'walkin') list = list.filter(v => !v.bookingUrl && !v.phone);
+
+    if (selectedFx) {
+      // Match filter is set: assign tiers, filter non-matching, sort by tier
+      list = list
+        .map(v => ({ ...v, tier: getVenueTier(v, selectedFx) ?? undefined }))
+        .filter(v => v.tier !== undefined);
+      list = [...list].sort((a, b) => (a.tier ?? 4) - (b.tier ?? 4));
+    } else if (sortOrder === 'match' && matchSortFx) {
+      // "Nearest match tonight" sort — no venue filtering, just re-order by tier
+      list = list.map(v => ({ ...v, tier: getVenueTier(v, matchSortFx) ?? undefined }));
+      list = [...list].sort((a, b) => {
+        const ta = a.tier ?? 10;
+        const tb = b.tier ?? 10;
+        if (ta !== tb) return ta - tb;
+        return Number(b.isFeatured) - Number(a.isFeatured) || a.name.localeCompare(b.name);
+      });
+    } else if (sortOrder === 'az') {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // 'picks' (default): featured first, then A-Z
+      list = [...list].sort((a, b) =>
+        Number(b.isFeatured) - Number(a.isFeatured) || a.name.localeCompare(b.name)
+      );
+    }
     return list;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venues, areaFilter, selectedFx, bookableFilter]);
+  }, [venues, regionFilter, typeFilter, selectedFx, matchSortFx, bookableFilter, sortOrder]);
+
+  // ── Curated strips ──
+  const curatedStrips = useMemo(() => {
+    const strips: { title: string; emoji: string; venues: Venue[] }[] = [];
+
+    // Featured by region
+    REGIONS.forEach(r => {
+      const fv = featuredVenues.filter(v => v.region === r);
+      if (fv.length >= 2) strips.push({ title: `Our Picks in ${r}`, emoji: '⭐', venues: fv });
+    });
+
+    // By crowd team
+    const crowdDefs: { team: string; title: string; emoji: string }[] = [
+      { team: 'Brazil',        title: 'Where Brazil fans watch',          emoji: '🇧🇷' },
+      { team: 'Portugal',      title: 'Where Portugal fans gather',        emoji: '🇵🇹' },
+      { team: 'Latin America', title: 'The Latin America crowd',           emoji: '🌎' },
+      { team: 'Iraq',          title: 'Where Iraq fans watch',             emoji: '🇮🇶' },
+    ];
+    crowdDefs.forEach(({ team, title, emoji }) => {
+      const cv = venues.filter(v => v.crowdTeam?.toLowerCase().includes(team.toLowerCase()));
+      if (cv.length >= 2) strips.push({ title, emoji, venues: cv });
+    });
+
+    return strips;
+  }, [featuredVenues, venues]);
 
   const scrollToFeatured = useCallback(() => {
     document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
-  // ── Countdown display ──
+  // ── Countdown ──
   const countdownEl = useMemo(() => {
     const target = liveMatch ?? nextMatch;
     if (!target) return null;
@@ -343,6 +464,8 @@ export default function Page() {
       </div>
     );
   }, [liveMatch, nextMatch, now]);
+
+  const hasActiveFilters = regionFilter !== '' || matchFilter !== 'all' || bookableFilter !== 'all' || typeFilter.length > 0;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: FONT_BODY, color: C.navy, WebkitFontSmoothing: 'antialiased' }}>
@@ -411,7 +534,6 @@ export default function Page() {
               </button>
             </div>
 
-            {/* Countdown card */}
             {countdownEl && (
               <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 18, padding: '22px 26px', backdropFilter: 'blur(8px)', flexShrink: 0, maxWidth: 380 }}>
                 <div style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: C.textBlue, marginBottom: 14 }}>
@@ -422,7 +544,7 @@ export default function Page() {
             )}
           </div>
 
-          {/* ── Fixture rail ── */}
+          {/* Fixture rail */}
           <div style={{ marginTop: 36, paddingBottom: 36 }}>
             <div style={{ fontSize: 12, fontFamily: FONT_MONO, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#7CF0BE', marginBottom: 10 }}>
               Upcoming fixtures (UK time)
@@ -456,9 +578,9 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ── Featured venues ── */}
-      <section id="featured" style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 24px 48px' }}>
-        <div style={{ marginBottom: 28 }}>
+      {/* ── Curated featured strips ── */}
+      <section id="featured" style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 24px 40px' }}>
+        <div style={{ marginBottom: 32 }}>
           <div style={{ fontFamily: FONT_MONO, fontSize: 12, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: C.green, marginBottom: 8 }}>Featured</div>
           <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(28px,3.5vw,40px)', letterSpacing: 0.3, textTransform: 'uppercase', margin: 0, color: C.navy }}>Best spots to watch</h2>
         </div>
@@ -467,6 +589,21 @@ export default function Page() {
           <div style={{ textAlign: 'center', padding: '48px 0', color: C.textMuted }}>
             <div style={{ fontSize: 28, marginBottom: 12 }}>⚽</div>
             <div style={{ fontSize: 15, fontWeight: 600 }}>Loading venues…</div>
+          </div>
+        ) : curatedStrips.length > 0 ? (
+          <div>
+            {curatedStrips.map(strip => (
+              <div key={strip.title} style={{ marginBottom: 44 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <span style={{ fontSize: 20 }}>{strip.emoji}</span>
+                  <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 'clamp(18px,2.2vw,24px)', letterSpacing: 0.3, textTransform: 'uppercase', margin: 0, color: C.navy }}>{strip.title}</h3>
+                  <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 600, marginLeft: 2 }}>{strip.venues.length}</span>
+                </div>
+                <div className="wtw-rail" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory' }}>
+                  {strip.venues.map(v => <StripCard key={v.id} venue={v} />)}
+                </div>
+              </div>
+            ))}
           </div>
         ) : featuredVenues.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: C.textMuted }}>
@@ -502,18 +639,25 @@ export default function Page() {
 
           {browseOpen && (
             <>
-              {/* 3-filter bar */}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24, padding: '16px', background: C.bg, borderRadius: 14 }}>
-                {/* Area filter */}
-                <div style={{ flex: '1 1 180px', minWidth: 160 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.textMuted, marginBottom: 6 }}>Area</label>
-                  <select value={areaFilter} onChange={e => setAreaFilter(e.target.value)} style={{ width: '100%', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, padding: '10px 12px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, outline: 'none', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
-                    <option value="">All areas</option>
-                    {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
+              {/* ── Region pill row (primary) ── */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                <button
+                  onClick={() => setRegionFilter('')}
+                  style={{ padding: '8px 16px', borderRadius: 999, border: `1.5px solid ${regionFilter === '' ? C.navy : C.borderHeavy}`, background: regionFilter === '' ? C.navy : C.white, color: regionFilter === '' ? C.white : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .12s' }}>
+                  All areas
+                </button>
+                {REGIONS.map(r => (
+                  <button key={r}
+                    onClick={() => setRegionFilter(regionFilter === r ? '' : r)}
+                    style={{ padding: '8px 16px', borderRadius: 999, border: `1.5px solid ${regionFilter === r ? C.green : C.borderHeavy}`, background: regionFilter === r ? 'rgba(0,179,104,0.1)' : C.white, color: regionFilter === r ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .12s' }}>
+                    {r}
+                  </button>
+                ))}
+              </div>
 
-                {/* Tonight's match filter */}
+              {/* ── Secondary filters: Match + Booking + Sort ── */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, padding: '16px', background: C.bg, borderRadius: 14 }}>
+                {/* Tonight's match */}
                 <div style={{ flex: '1.4 1 220px', minWidth: 200 }}>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.textMuted, marginBottom: 6 }}>Tonight&apos;s match</label>
                   <select value={matchFilter} onChange={e => setMatchFilter(e.target.value)} style={{ width: '100%', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, padding: '10px 12px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, outline: 'none', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
@@ -526,7 +670,7 @@ export default function Page() {
                   </select>
                 </div>
 
-                {/* Walk-in / Bookable */}
+                {/* Booking segmented */}
                 <div style={{ flex: '1 1 160px', minWidth: 150 }}>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.textMuted, marginBottom: 6 }}>Booking</label>
                   <div style={{ display: 'flex', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, overflow: 'hidden', background: C.white }}>
@@ -538,19 +682,48 @@ export default function Page() {
                   </div>
                 </div>
 
+                {/* Sort */}
+                <div style={{ flex: '1 1 160px', minWidth: 148 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.textMuted, marginBottom: 6 }}>Sort by</label>
+                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'picks' | 'az' | 'match')} style={{ width: '100%', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, padding: '10px 12px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, outline: 'none', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
+                    <option value="picks">⭐ Our Picks first</option>
+                    <option value="match">Nearest match tonight</option>
+                    <option value="az">A–Z</option>
+                  </select>
+                </div>
+
                 {/* Clear filters */}
-                {(areaFilter || matchFilter !== 'all' || bookableFilter !== 'all') && (
+                {hasActiveFilters && (
                   <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                    <button onClick={() => { setAreaFilter(''); setMatchFilter('all'); setBookableFilter('all'); }} style={{ background: 'transparent', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.textSub, cursor: 'pointer', textDecoration: 'underline', padding: '10px 4px' }}>
+                    <button onClick={() => { setRegionFilter(''); setMatchFilter('all'); setBookableFilter('all'); setTypeFilter([]); setSortOrder('picks'); }} style={{ background: 'transparent', border: 'none', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, color: C.textSub, cursor: 'pointer', textDecoration: 'underline', padding: '10px 4px' }}>
                       Clear
                     </button>
                   </div>
                 )}
               </div>
 
+              {/* ── Type multi-select chips (secondary) ── */}
+              {availableTypes.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, letterSpacing: 0.6, textTransform: 'uppercase', marginRight: 2 }}>Type</span>
+                  {availableTypes.map(t => {
+                    const active = typeFilter.includes(t);
+                    return (
+                      <button key={t}
+                        onClick={() => setTypeFilter(f => active ? f.filter(x => x !== t) : [...f, t])}
+                        style={{ padding: '7px 14px', borderRadius: 999, border: `1.5px solid ${active ? C.green : C.borderHeavy}`, background: active ? 'rgba(0,179,104,0.1)' : C.white, color: active ? C.greenDark : C.navy, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .12s' }}>
+                        {TYPE_LABELS[t] ?? capitalise(t)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Count */}
               <div style={{ fontSize: 14, color: C.textSub, marginBottom: 16 }}>
-                <strong style={{ color: C.navy }}>{browseList.length}</strong> venues{areaFilter ? ` in ${areaFilter}` : ''}
+                <strong style={{ color: C.navy }}>{browseList.length}</strong> venues
+                {regionFilter ? ` in ${regionFilter}` : ''}
+                {typeFilter.length === 1 ? ` · ${TYPE_LABELS[typeFilter[0]] ?? typeFilter[0]}` : typeFilter.length > 1 ? ` · ${typeFilter.length} types` : ''}
                 {selectedFx ? ` · filtered for ${selectedFx.home_team} v ${selectedFx.away_team}` : ''}
               </div>
 
@@ -558,7 +731,7 @@ export default function Page() {
               {browseList.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px 24px', color: C.textMuted }}>
                   <div style={{ fontSize: 14, marginBottom: 12 }}>No venues match these filters.</div>
-                  <button onClick={() => { setAreaFilter(''); setMatchFilter('all'); setBookableFilter('all'); }} style={{ background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '11px 22px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  <button onClick={() => { setRegionFilter(''); setMatchFilter('all'); setBookableFilter('all'); setTypeFilter([]); setSortOrder('picks'); }} style={{ background: C.green, color: C.white, border: 'none', borderRadius: 12, padding: '11px 22px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                     Clear filters
                   </button>
                 </div>
