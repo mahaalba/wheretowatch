@@ -1,10 +1,22 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import PhotoCarousel from './components/PhotoCarousel';
+import type { VenuePin } from './components/MapView';
 import { supabase } from '@/lib/supabase';
 import { flagFor } from '@/lib/teamFlags';
+
+// Leaflet map is client-only (touches window/document) — load without SSR.
+const MapView = dynamic(() => import('./components/MapView'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ height: 560, borderRadius: 20, background: '#F5F1E8', border: '1px solid rgba(10,26,51,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5B6577', fontSize: 14, fontWeight: 600 }}>
+      Loading map…
+    </div>
+  ),
+});
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -67,6 +79,7 @@ interface Venue {
   gamesPolicy: string; bookable: string;
   crowdTeam?: string; tier?: 1 | 2 | 3;
   showsWorldCup: boolean; closingTime: string | null;
+  lat: number | null; lng: number | null;
 }
 
 interface RawDbVenue {
@@ -75,6 +88,7 @@ interface RawDbVenue {
   price_level?: string; is_featured?: boolean; verified?: boolean;
   bookable?: string; crowd_team?: string;
   shows_world_cup?: boolean; closing_time?: string | null;
+  lat?: number | null; lng?: number | null;
   auto_tags?: string[] | null;
   venue_fixtures?: Array<{ games_policy?: string }>;
   venue_photos?: Array<{ photo_url: string; display_order: number }>;
@@ -96,6 +110,8 @@ function mapVenue(raw: RawDbVenue): Venue {
     crowdTeam: raw.crowd_team ?? undefined,
     showsWorldCup: raw.shows_world_cup ?? false,
     closingTime: raw.closing_time ?? null,
+    lat: typeof raw.lat === 'number' ? raw.lat : null,
+    lng: typeof raw.lng === 'number' ? raw.lng : null,
   };
 }
 
@@ -327,6 +343,7 @@ export default function Page() {
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'picks' | 'az' | 'match'>('picks');
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const now = useNow();
 
@@ -450,6 +467,17 @@ export default function Page() {
     return list;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venues, regionFilter, typeFilter, selectedFx, matchSortFx, bookableFilter, sortOrder]);
+
+  // ── Map pins mirror the filtered list (only venues with coordinates) ──
+  const mapPins: VenuePin[] = useMemo(
+    () => browseList
+      .filter(v => v.lat != null && v.lng != null)
+      .map(v => ({
+        id: v.id, name: v.name, type: v.type, priceLevel: v.priceLevel, area: v.area,
+        featured: v.isFeatured, coords: [v.lat as number, v.lng as number], active: false,
+      })),
+    [browseList],
+  );
 
   // ── Curated strips ──
   const curatedStrips = useMemo(() => {
@@ -798,16 +826,29 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Count */}
-              <div style={{ fontSize: 14, color: C.textSub, marginBottom: 16 }}>
-                <strong style={{ color: C.navy }}>{browseList.length}</strong> venues
-                {regionFilter ? ` in ${regionFilter}` : ''}
-                {typeFilter.length === 1 ? ` · ${TYPE_LABELS[typeFilter[0]] ?? typeFilter[0]}` : typeFilter.length > 1 ? ` · ${typeFilter.length} types` : ''}
-                {selectedFx ? ` · screening ${selectedFx.home_team} v ${selectedFx.away_team} and open through the ${bstTimeStr(selectedFx.kickoff_at)} kickoff` : ''}
+              {/* Count + list/map toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                <div style={{ fontSize: 14, color: C.textSub }}>
+                  <strong style={{ color: C.navy }}>{browseList.length}</strong> venues
+                  {regionFilter ? ` in ${regionFilter}` : ''}
+                  {typeFilter.length === 1 ? ` · ${TYPE_LABELS[typeFilter[0]] ?? typeFilter[0]}` : typeFilter.length > 1 ? ` · ${typeFilter.length} types` : ''}
+                  {selectedFx ? ` · screening ${selectedFx.home_team} v ${selectedFx.away_team} and open through the ${bstTimeStr(selectedFx.kickoff_at)} kickoff` : ''}
+                </div>
+                <div style={{ display: 'flex', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, overflow: 'hidden', background: C.white, flexShrink: 0 }}>
+                  {(['list', 'map'] as const).map(mode => (
+                    <button key={mode} onClick={() => setViewMode(mode)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', fontFamily: FONT_BODY, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', borderLeft: mode === 'map' ? `1px solid ${C.borderHeavy}` : 'none', background: viewMode === mode ? C.navy : C.white, color: viewMode === mode ? C.white : C.navy, transition: 'all .12s' }}>
+                      {mode === 'list' ? '☰ List' : '📍 Map'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Venue list */}
-              {browseList.length === 0 ? (
+              {/* Map view — pins mirror the filtered list */}
+              {viewMode === 'map' ? (
+                <div style={{ height: 560 }}>
+                  <MapView pins={mapPins} />
+                </div>
+              ) : browseList.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px 24px', color: C.textMuted }}>
                   <div style={{ fontSize: 14, marginBottom: 12 }}>
                     {selectedFx
