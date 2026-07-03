@@ -208,29 +208,29 @@ function useNow() {
 
 // ─── Booking CTA ─────────────────────────────────────────────────────────────
 function BookingCTA({ venue: v, large = false }: { venue: Venue; large?: boolean }) {
-  const pad = large ? '14px 20px' : '11px 16px';
+  const pad = large ? '14px 20px' : '11px 14px';
   const fs = large ? 15 : 13;
   const rad = 12;
   if (v.bookingUrl) {
     return (
       <a href={`/api/track?venue=${v.id}&type=booking&url=${encodeURIComponent(v.bookingUrl)}`}
         target="_blank" rel="noopener noreferrer"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.green, color: C.white, borderRadius: rad, padding: pad, textDecoration: 'none', fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
-        Book for tonight →
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap', background: C.green, color: C.white, borderRadius: rad, padding: pad, textDecoration: 'none', fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
+        Book tonight →
       </a>
     );
   }
   if (v.phone) {
     return (
       <a href={`/api/track?venue=${v.id}&type=phone&url=${encodeURIComponent(`tel:${v.phone.replace(/\s/g, '')}`)}`}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.navy, color: C.white, borderRadius: rad, padding: pad, textDecoration: 'none', fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap', background: C.navy, color: C.white, borderRadius: rad, padding: pad, textDecoration: 'none', fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
         Call to check →
       </a>
     );
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0F2F5', color: C.textSub, borderRadius: rad, padding: pad, fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
-      Walk in — no booking needed
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap', background: '#F0F2F5', color: C.textSub, borderRadius: rad, padding: pad, fontFamily: FONT_BODY, fontSize: fs, fontWeight: 700 }}>
+      Walk-ins welcome
     </div>
   );
 }
@@ -303,7 +303,14 @@ function FeaturedCard({ venue: v }: { venue: Venue }) {
 // ─── Browse venue row ─────────────────────────────────────────────────────────
 function BrowseRow({ venue: v, matchSelected }: { venue: Venue; matchSelected: boolean }) {
   return (
-    <article style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+    <article style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '14px 18px 14px 14px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+      {/* Cover thumbnail — same venue_photos cover the cards use */}
+      <Link href={`/venues/${v.id}`} style={{ flexShrink: 0, width: 64, height: 64, borderRadius: 12, overflow: 'hidden', background: 'linear-gradient(160deg, #060F1F 0%, #0E2244 100%)', display: 'block' }}>
+        {v.photos[0] && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={v.photos[0]} alt={v.name} width={64} height={64} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        )}
+      </Link>
       <div style={{ flex: 1, minWidth: 200 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 20, letterSpacing: 0.3, textTransform: 'uppercase', margin: 0, color: C.navy }}>{v.name}</h3>
@@ -474,7 +481,8 @@ export default function Page() {
       .filter(v => v.lat != null && v.lng != null)
       .map(v => ({
         id: v.id, name: v.name, type: v.type, priceLevel: v.priceLevel, area: v.area,
-        featured: v.isFeatured, coords: [v.lat as number, v.lng as number], active: false,
+        featured: v.isFeatured, photo: v.photos[0] ?? null,
+        coords: [v.lat as number, v.lng as number] as [number, number], active: false,
       })),
     [browseList],
   );
@@ -793,7 +801,7 @@ export default function Page() {
                 <div style={{ flex: '1 1 160px', minWidth: 148 }}>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: C.textMuted, marginBottom: 6 }}>Sort by</label>
                   <select value={sortOrder} onChange={e => setSortOrder(e.target.value as 'picks' | 'az' | 'match')} style={{ width: '100%', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, padding: '10px 12px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, outline: 'none', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
-                    <option value="picks">⭐ Our Picks first</option>
+                    <option value="picks">⭐ Featured</option>
                     <option value="match">Nearest match tonight</option>
                     <option value="az">A–Z</option>
                   </select>

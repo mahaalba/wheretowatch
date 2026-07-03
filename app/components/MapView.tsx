@@ -10,6 +10,7 @@ export interface VenuePin {
   priceLevel: string;
   area: string;
   featured: boolean;
+  photo: string | null;
   coords: [number, number];
   active: boolean;
 }
@@ -24,7 +25,6 @@ const NAVY = '#0A1A33';
 const GREEN = '#00B368';
 const GREEN_DARK = '#0A6B45';
 const CREAM = '#F5F1E8';
-const AMBER = '#FFB22E';
 
 export default function MapView({ pins, onPinClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,11 +89,15 @@ export default function MapView({ pins, onPinClick }: Props) {
         const mk = L.marker(p.coords, { icon }).addTo(layerRef.current!);
         const typeLabel = p.type ? p.type.charAt(0).toUpperCase() + p.type.slice(1) : '';
         const meta = [typeLabel, p.area, p.priceLevel].filter(Boolean).join(' · ');
+        const cover = p.photo
+          ? `<img src="${p.photo}" alt="${p.name}" loading="lazy" style="display:block;width:100%;height:96px;object-fit:cover;border-radius:8px;margin-bottom:8px"/>`
+          : '';
         const pick = p.featured
           ? `<span style="display:inline-block;margin-top:4px;font-size:11px;font-weight:800;color:${GREEN_DARK}">⭐ Our Pick</span><br/>`
           : '';
         mk.bindPopup(
-          `<div style="font-family:inherit;min-width:150px">` +
+          `<div style="font-family:inherit;min-width:170px;max-width:200px">` +
+          cover +
           `<strong style="color:${NAVY};font-size:14px">${p.name}</strong><br/>` +
           `<span style="color:#5B6577;font-size:12px">${meta}</span><br/>` +
           pick +
@@ -136,12 +140,10 @@ export default function MapView({ pins, onPinClick }: Props) {
       )}
 
       {/* Legend */}
-      <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 800, display: 'flex', gap: 13, flexWrap: 'wrap', background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(6px)', border: '1px solid rgba(10,26,51,0.1)', borderRadius: 11, padding: '8px 12px', boxShadow: '0 4px 14px rgba(10,26,51,0.12)' }}>
-        {[[GREEN, 'Our Pick'], [NAVY, 'Venue'], [AMBER, 'Selected']].map(([c, l]) => (
-          <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: NAVY, fontWeight: 600 }}>
-            <span style={{ width: 11, height: 11, borderRadius: 999, background: c, flexShrink: 0 }} />{l}
-          </span>
-        ))}
+      <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 800, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(6px)', border: '1px solid rgba(10,26,51,0.1)', borderRadius: 11, padding: '8px 12px', boxShadow: '0 4px 14px rgba(10,26,51,0.12)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: NAVY, fontWeight: 600 }}>
+          <span style={{ width: 11, height: 11, borderRadius: 999, background: GREEN, flexShrink: 0 }} />Top picks
+        </span>
       </div>
     </div>
   );
