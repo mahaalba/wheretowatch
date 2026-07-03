@@ -267,7 +267,7 @@ export default function VenuePage() {
               target="_blank" rel="noopener noreferrer"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: C.green, color: C.white, borderRadius: 14, padding: '15px 20px', textDecoration: 'none', fontFamily: FONT_BODY, fontSize: 15, fontWeight: 700, letterSpacing: 0.2 }}
             >
-              Book for tonight&apos;s game →
+              Book for next game →
             </a>
           ) : venue.phone ? (
             <a
