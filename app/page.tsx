@@ -131,8 +131,9 @@ function bstTimeStr(isoStr: string) {
   return `${h12}:${String(m).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`;
 }
 function dayLabel(isoStr: string) {
-  const d = new Date(isoStr);
-  const now = new Date();
+  // Compare dates on the BST clock (UTC+1) so past-midnight kickoffs get the right day
+  const d = new Date(new Date(isoStr).getTime() + 3600000);
+  const now = new Date(Date.now() + 3600000);
   const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const dayMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
   const diff = Math.round((dayMs - todayMs) / 86400000);
