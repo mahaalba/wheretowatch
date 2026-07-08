@@ -42,7 +42,7 @@ const AREA_TO_REGION: Record<string, Region> = {
   'Chelsea': 'West London', 'Chelsea / Fulham Road': 'West London',
   "Chelsea / King's Road": 'West London', 'Chiswick': 'West London',
   'Fulham': 'West London', 'Kensington (W14)': 'West London',
-  'Maida Vale': 'West London', 'Notting Hill': 'West London',
+  'Edgware Road': 'West London', 'Maida Vale': 'West London', 'Notting Hill': 'West London',
   'Notting Hill (Golborne Rd)': 'West London', 'Paddington': 'West London',
   'Park Royal / Harlesden': 'West London', "Shepherd's Bush": 'West London',
   'Belsize Park': 'North London', 'Camden': 'North London',
@@ -504,6 +504,7 @@ export default function Page() {
       { team: 'Portugal',      title: 'Where Portugal fans gather',        emoji: '🇵🇹' },
       { team: 'Latin America', title: 'The Latin America crowd',           emoji: '🌎' },
       { team: 'Iraq',          title: 'Where Iraq fans watch',             emoji: '🇮🇶' },
+      { team: 'Morocco',       title: 'Dima Maghreb',                      emoji: '🇲🇦' },
     ];
     crowdDefs.forEach(({ team, title, emoji }) => {
       const cv = venues.filter(v => v.crowdTeam?.toLowerCase().includes(team.toLowerCase()));

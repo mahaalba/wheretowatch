@@ -258,6 +258,23 @@ export default function VenuePage() {
           </div>
         )}
 
+        {/* Matchday info — free-form setup_tags entries */}
+        {setupTags.length > 0 && (
+          <div style={{ margin: '16px 16px 0', background: C.white, borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px 8px', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: C.textMuted }}>Matchday info</span>
+            </div>
+            <div style={{ padding: '12px 18px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {setupTags.map(t => (
+                <div key={t} style={{ display: 'flex', gap: 9, fontSize: 14, color: C.textSub, lineHeight: 1.5 }}>
+                  <span style={{ color: C.green, fontWeight: 800, flexShrink: 0 }}>·</span>
+                  <span>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Action buttons */}
         <div style={{ margin: '20px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Primary CTA — three honest states */}
