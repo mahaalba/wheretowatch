@@ -416,8 +416,16 @@ export default function Page() {
     [dbFixtures, todayBst],
   );
 
+  // ── Upcoming fixtures on the live clock ──
+  // The fixture query runs once on load; filtering against useNow() means a
+  // long-lived tab drops games as they finish instead of showing them forever.
+  const upcomingFixtures = useMemo(
+    () => dbFixtures.filter(fx => new Date(fx.kickoff_at).getTime() + 95 * 60000 > now.getTime()),
+    [dbFixtures, now],
+  );
+
   // ── Next/live match ──
-  const nextMatch = dbFixtures[0] ?? null;
+  const nextMatch = upcomingFixtures.find(fx => new Date(fx.kickoff_at).getTime() > now.getTime()) ?? null;
   const liveMatch = useMemo(() => {
     const ms = now.getTime();
     return dbFixtures.find(fx => {
@@ -644,7 +652,7 @@ export default function Page() {
               Upcoming fixtures (UK time)
             </div>
             <div className="wtw-rail" style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, scrollSnapType: 'x mandatory' }}>
-              {dbFixtures.slice(0, 20).map(fx => {
+              {upcomingFixtures.slice(0, 20).map(fx => {
                 const day = dayLabel(fx.kickoff_at);
                 const time = bstTimeStr(fx.kickoff_at);
                 const isSelected = matchFilter === fx.id;
@@ -776,7 +784,7 @@ export default function Page() {
                   <select value={matchFilter} onChange={e => setMatchFilter(e.target.value)} style={{ width: '100%', border: `1.5px solid ${C.borderHeavy}`, borderRadius: 10, padding: '10px 12px', fontFamily: FONT_BODY, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, outline: 'none', cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none' }}>
                     <option value="all">Any fixture</option>
                     {(() => {
-                      const base = todayFixtures.length > 0 ? todayFixtures : dbFixtures.slice(0, 6);
+                      const base = todayFixtures.length > 0 ? todayFixtures : upcomingFixtures.slice(0, 6);
                       const opts = selectedFx && !base.some(f => f.id === selectedFx.id) ? [selectedFx, ...base] : base;
                       return opts.map(fx => (
                         <option key={fx.id} value={fx.id}>
