@@ -513,6 +513,8 @@ export default function Page() {
       { team: 'Latin America', title: 'The Latin America crowd',           emoji: '🌎' },
       { team: 'Iraq',          title: 'Where Iraq fans watch',             emoji: '🇮🇶' },
       { team: 'Morocco',       title: 'Dima Maghreb',                      emoji: '🇲🇦' },
+      { team: 'Spain',         title: 'Where Spain fans watch',           emoji: '🇪🇸' },
+      { team: 'Argentina',     title: 'Where Argentina fans watch',        emoji: '🇦🇷' },
     ];
     crowdDefs.forEach(({ team, title, emoji }) => {
       const cv = venues.filter(v => v.crowdTeam?.toLowerCase().includes(team.toLowerCase()));
